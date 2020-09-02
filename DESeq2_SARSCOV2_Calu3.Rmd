@@ -130,33 +130,36 @@ write.csv(SARSCOV2_DEgenes_Calu3_24hrs_david, "results/SARSCOV2_DEgenes_Calu3_24
 ```{r PCA  }
 
 #join with the counts data 
-all_expression <- SARSCO2_Calu3_counts %>%
-  gather(name, expression, -Gene.ID.Name) %>%
+
+all_expression <- read_csv("results/DESeq2_SARSCOV2_Calu3_all_normalized_counts.csv") %>%
+  gather(name, norm_counts, -X1) %>%
   left_join(SARSCO2_Calu3_metadata, by = "name")
+
 
 #scale gene expression for all samples 
 scaled_genes <- all_expression %>%
-  spread(Gene.ID.Name, expression) %>%
-  select(-cells, -infection, -rep, -condition, -timepoint) %>% 
+  spread(X1, norm_counts) %>%
+  select( -cells, -infection, -rep, -condition, -timepoint) %>% 
   column_to_rownames("name") %>% 
   scale()
+
 
 #use the prcomp function on scaled samples
 pca_genes <- prcomp(scaled_genes)
 
 #tidy data frame for plotting
 PCA_data <- pca_genes$x %>% 
-  as_tibble(rownames = "Sample") %>%
-  gather(PC, expression, -Sample) %>% 
-  left_join(all_metadata, by = "Sample") %>%
-  spread(PC, expression)
+  as_tibble(rownames = "name") %>%
+  gather(PC, variance, -name) %>% 
+  left_join(SARSCO2_Calu3_metadata, by = "name") %>%
+  spread(PC, variance) %>% 
+  separate(name, c("extraction", "sample", "mapping_index"))
 
 #plot to examine variance for all samples 
-text_plot_Name <- ggplot(PCA_data, aes(x = PC1, y = PC2)) +
-  geom_text(aes(label = Name), size = 4)+
-  labs(title = "LT07 is an outlier")
+pca_plot_sample <- ggplot(PCA_data, aes(x = PC1, y = PC2)) +
+  geom_text(aes(label = sample), size = 4)
   
-ggsave(filename = "results/PCA_all_samples.png", plot = text_plot_Name, width = 12, height = 10, dpi = 300, units = "cm")
+ggsave(filename = "results/pca_plot_samples.png", plot = pca_plot_sample, width = 12, height = 10, dpi = 300, units = "cm")
 ```
 
 
