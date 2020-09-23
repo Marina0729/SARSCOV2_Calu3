@@ -27,7 +27,7 @@ library(cowplot)
 library(patchwork)
 library(ggsignif)
 library(DESeq2)
-
+library(biomaRt)
 
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -84,6 +84,8 @@ write.csv(norm_counts, file="results/DESeq2_SARSCOV2_Calu3_all_normalized_counts
 CoV2genes24hr <- results(dds, contrast = c("condition", "SARSCOV2_24hr", "uninfected_24hr"))
 
 
+  
+
 
 
 ```
@@ -136,6 +138,8 @@ all_expression <- read_csv("results/DESeq2_SARSCOV2_Calu3_all_normalized_counts.
   left_join(SARSCO2_Calu3_metadata, by = "name")
 
 
+
+
 #scale gene expression for all samples 
 scaled_genes <- all_expression %>%
   spread(X1, norm_counts) %>%
@@ -160,6 +164,66 @@ pca_plot_sample <- ggplot(PCA_data, aes(x = PC1, y = PC2)) +
   geom_text(aes(label = sample), size = 4)
   
 ggsave(filename = "results/pca_plot_samples.png", plot = pca_plot_sample, width = 12, height = 10, dpi = 300, units = "cm")
+
+
+```
+
+```{r looing at ACE2 in Calu3 cells}
+
+ACE2_expression <- read_csv("results/DESeq2_SARSCOV2_Calu3_all_normalized_counts.csv") %>%
+  gather(name, norm_counts, -X1) %>%
+  left_join(SARSCO2_Calu3_metadata, by = "name") %>% 
+  separate(X1, c("gene", "gene1")) %>%
+  filter(gene == "ACE2")
+
+plot_ACE2_Calu3 <- ggplot(ACE2_expression, aes(y = norm_counts, x = condition))+
+  geom_jitter(width = 0.2)+
+  labs(title = "ACE2 expression in Calu3 cells")
+
+ggsave(filename = "results/plot_ACE2_Calu3.png", plot = plot_ACE2_Calu3, width = 12, height = 10, dpi = 300, units = "cm")
+
+
+```
+
+```{r Preparing count table for RiboToolkit}
+#############################
+
+library(org.Hs.eg.db)
+
+ensemblsIDS <- read.csv("data/hg38.geneID.csv")
+
+symbols <- mapIds(org.Hs.eg.db, keys = ensemblsIDS$GeneID, keytype = "ENSEMBL", column="SYMBOL") %>% 
+  as.data.frame() %>%
+  tibble::rownames_to_column("ensemblGeneIDs") %>% 
+  dplyr::rename("GeneID" = ".")
+
+HTseq_counts_org <- read.csv("data/SARSCOV2_Calu3_HTSeq_merged_gtf_counts.csv") %>% 
+  separate(Gene.ID.Name, c("XLOC", "XLOC.ID", "GeneID")) %>%
+  left_join(symbols, by ="GeneID") %>%
+  dplyr::filter(ensemblGeneIDs != "NA") %>% 
+  dplyr::select(ensemblGeneIDs, mRNA_01_merged,mRNA_01_merged, mRNA_02_merged, mRNA_03_merged, mRNA_04_merged, mRNA_05_merged, mRNA_06_merged, mRNA_07_merged, mRNA_08_merged, mRNA_09_merged )
+
+############################
+
+library(EnsDb.Hsapiens.v79)
+
+#Convert from ensembl.gene to gene.symbol
+
+geneIDs1 <- ensembldb::select(EnsDb.Hsapiens.v79, keys= ensemblsIDS$GeneID, keytype = "GENEID", columns = c("SYMBOL","GENEID"))
+
+HTseq_counts_EnsDb <- read.csv("data/SARSCOV2_Calu3_HTSeq_merged_gtf_counts.csv") %>% 
+  separate(Gene.ID.Name, c("XLOC", "XLOC.ID", "SYMBOL")) %>%
+  left_join(geneIDs1, by = "SYMBOL") %>%
+  dplyr::filter(GENEID != "NA") %>% 
+  dplyr::select(GENEID, mRNA_01_merged,mRNA_01_merged, mRNA_02_merged, mRNA_03_merged, mRNA_04_merged, mRNA_05_merged, mRNA_06_merged, mRNA_07_merged, mRNA_08_merged, mRNA_09_merged )
+
+count_RiboToolkit <- HTseq_counts_EnsDb %>% 
+  dplyr::rename(mRNA_01 = mRNA_01_merged, mRNA_02 = mRNA_02_merged, mRNA_03 = mRNA_03_merged, mRNA_04 = mRNA_04_merged, mRNA_05 = mRNA_05_merged, mRNA_06 = mRNA_06_merged, mRNA_07 = mRNA_07_merged, mRNA_08 = mRNA_08_merged, mRNA_09 = mRNA_09_merged  )
+  
+
+  
+######################################################
+
 ```
 
 
