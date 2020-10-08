@@ -41,52 +41,50 @@ knitr::opts_chunk$set(
 
 rm(list=ls())
 
-SARSCO2_Calu3_counts <- read.csv("data/SARSCOV2_Calu3_all_samples.csv")
+SARSCO2_Calu3_counts <- read.csv("data/SARSCOV2_Calu3_HTSeq_merged_gtf_counts.csv")
 SARSCO2_Calu3_metadata <- read.csv("data/metadata_mRNA_SARSCOV2_Calu3.csv")
 
-df <- read.csv("data/SARSCOV2_Calu3_all_samples.csv", header=TRUE, row.names=1)
+df_merged <- read.csv("data/SARSCOV2_Calu3_HTSeq_merged_gtf_counts.csv", header=TRUE, row.names=1)
 
-dim(df)
+dim(df_merged)
 
-md <- read.csv("data/metadata_mRNA_SARSCOV2_Calu3.csv", header=TRUE, row.names=1)
+md_merged <- read.csv("data/metadata_mRNA_SARSCOV2_Calu3_merged.csv", header=TRUE, row.names=1)
 
-dim(md)
+dim(md_merged)
 
 #merge count and metadata file
-all(rownames(md) == colnames (df))
+all(rownames(md_merged) == colnames (df_merged))
 
 # Calculate counts per million.
 # Filter rows: at least 3 samples must have at least 1 cpm.
 # Retain rows according to 'keep' and nothing on columns.
-cpm <- apply(df, 2, function(x) (x/sum(x))*1000000)
+cpm <- apply(df_merged, 2, function(x) (x/sum(x))*1000000)
 keep <- rowSums( cpm >= 1 ) >=4
-df_filtered <- df[ keep, ]
+df_filtered_merged <- df_merged[ keep, ]
 
-dim(df_filtered)
+dim(df_filtered_merged)
 
 
 # Construct a SummarizedExperiment object:
-dds <- DESeqDataSetFromMatrix(
-  countData = df_filtered,
-  colData = md,
+dds_merged <- DESeqDataSetFromMatrix(
+  countData = df_filtered_merged,
+  colData = md_merged,
   design = ~ condition) # ~ is representative of 'by', i.e. compare by condition
 
 
 # Perform DE testing:
-dds <- DESeq(dds)
+dds_merged <- DESeq(dds_merged)
 
 # Output normalized counts:
-norm_counts <- counts (dds, normalized=TRUE)
-write.csv(norm_counts, file="results/DESeq2_SARSCOV2_Calu3_all_normalized_counts.csv")
+norm_counts_merged <- counts (dds_merged, normalized=TRUE)
+write.csv(norm_counts_merged, file="results/DESeq2_SARSCOV2_Calu3_all_normalized_counts_merged.csv")
 
 
 # Convert results to dataframe:
-CoV2genes24hr <- results(dds, contrast = c("condition", "SARSCOV2_24hr", "uninfected_24hr"))
+CoV2genes24hr_merged <- results(dds_merged, contrast = c("condition", "SARSCOV2_24hr", "uninfected_24hr"))
 
-
-  
-
-
+CoV2genes24hr_merged %>% 
+  as_tibble(rownames = "gene")
 
 ```
 
@@ -100,31 +98,30 @@ beta <- c( 1 )
 gamma <- c( 5 )
 
 # 'Which' provides positions of 'TRUE' values.
-sigCoV2genes24hr<- CoV2genes24hr[ which( CoV2genes24hr$padj < alpha), ]
+sigCoV2genes24hr_merged<- CoV2genes24hr_merged[ which( CoV2genes24hr_merged$padj < alpha), ]
 # Slices out rows where the adjusted p-value is <0.05.
-sigCoV2genes24hr <- sigCoV2genes24hr[ which( abs(sigCoV2genes24hr$log2FoldChange) > beta), ]
+sigCoV2genes24hr_merged <- sigCoV2genes24hr_merged[ which( abs(sigCoV2genes24hr_merged$log2FoldChange) > beta), ]
 # Slices out rows where the fold change is above 2 and below -2.
 # Abs=absolute, tells it to filter things above 2, ignoring whether value is positive or negative.
-sigCoV2genes24hr <- sigCoV2genes24hr[ which(sigCoV2genes24hr$baseMean > gamma), ]
-write.csv(sigCoV2genes24hr, file="results/sigCoV2genes24hr.csv")
+sigCoV2genes24hr_merged <- sigCoV2genes24hr_merged[ which(sigCoV2genes24hr_merged$baseMean > gamma), ]
+write.csv(sigCoV2genes24hr_merged, file="results/sigCoV2genes24hr_merged.csv")
 # Slices out rows above an average count of 10 reads (anything below is rubbish).
 
-CoV2genes24hr_hits <- rownames(sigCoV2genes24hr)
-length(CoV2genes24hr_hits)
-write.csv(norm_counts[CoV2genes24hr_hits, ], file="results/DESeq2_sig_CoV2genes24hr_normalized_counts.csv")
+CoV2genes24hr_hits_merged <- rownames(sigCoV2genes24hr_merged)
+length(CoV2genes24hr_hits_merged)
+write.csv(norm_counts_merged[CoV2genes24hr_hits_merged, ], file="results/DESeq2_sig_CoV2genes24hr_normalized_counts_merged.csv")
 
-SARSCOV2_DEgenes_Calu3_24hrs <- read_csv("results/sigCoV2genes24hr.csv") %>%
+SARSCOV2_DEgenes_Calu3_24hrs_merged <- read_csv("results/sigCoV2genes24hr_merged.csv") %>%
   as.data.frame() %>% 
-  separate(X1, c("gene", "gene1"), sep = "_") %>% 
-  select(-gene1) %>%
+  dplyr::rename(GENE_LOCUS = X1) %>%
   arrange(padj)
 
-write.csv(SARSCOV2_DEgenes_Calu3_24hrs, "results/SARSCOV2_DEgenes_Calu3_24hrs.csv")
+write.csv(SARSCOV2_DEgenes_Calu3_24hrs_merged, "results/SARSCOV2_DEgenes_Calu3_24hrs_merged.csv")
 
-SARSCOV2_DEgenes_Calu3_24hrs_david <- SARSCOV2_DEgenes_Calu3_24hrs %>% 
-  select(gene)
+SARSCOV2_DEgenes_Calu3_24hrs_david_merged <- SARSCOV2_DEgenes_Calu3_24hrs_merged %>% 
+  dplyr::select(gene)
 
-write.csv(SARSCOV2_DEgenes_Calu3_24hrs_david, "results/SARSCOV2_DEgenes_Calu3_24hrs_david.csv")
+write.csv(SARSCOV2_DEgenes_Calu3_24hrs_david_merged, "results/SARSCOV2_DEgenes_Calu3_24hrs_david_merged.csv")
 
 ```
 
