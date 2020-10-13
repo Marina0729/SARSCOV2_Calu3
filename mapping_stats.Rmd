@@ -1,0 +1,142 @@
+---
+title: "CDS_mapped_reads"
+author: "Marina Alexander"
+date: "08/10/2020"
+output:
+  pdf_document: default
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+
+# remind R where to look for libraries
+.libPaths(c("C:/Users/ale097/Data School/Packages"))
+# load libraries
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(readr)
+library(vroom)
+library(stringr)
+library(EnhancedVolcano)
+library(viridis)
+library(ggsci)
+library(cowplot)
+library(patchwork)
+library(ggsignif)
+library(DESeq2)
+library(biomaRt)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center'
+)
+```
+
+```{r}
+
+CDS_mapped <- read.csv("data/read_lengths_CDS.csv") %>%
+  gather(sample, counts, -read_length)
+
+plot01 <- CDS_mapped %>% 
+  filter(sample == "sample_01") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample01")
+plot02 <- CDS_mapped %>% 
+  filter(sample == "sample_02") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample02")
+plot03 <- CDS_mapped %>% 
+  filter(sample == "sample_03") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample03")
+plot04 <- CDS_mapped %>% 
+  filter(sample == "sample_04") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample04")
+plot05 <- CDS_mapped %>% 
+  filter(sample == "sample_05") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample05")
+plot06 <- CDS_mapped %>% 
+  filter(sample == "sample_06") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample06")
+plot07 <- CDS_mapped %>% 
+  filter(sample == "sample_07") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample07")
+plot08 <- CDS_mapped %>% 
+  filter(sample == "sample_08") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample08")
+plot09 <- CDS_mapped %>% 
+  filter(sample == "sample_09") %>% 
+  ggplot(aes(x = read_length, y = counts)) +
+  geom_bar(stat="identity")+
+  labs(title = "sample09")
+
+plot_all <- plot_grid(plot01, plot02, plot03, plot04, plot05, plot06, plot07, plot08, plot09)
+
+ggsave(filename = "results/allsamples_CDSreadlengths.png", plot = plot_all, width = 15, height = 10, dpi = 300, units = "cm")
+
+```
+
+```{r}
+
+CDS_mapped_freq <- read.csv("data/read_lengths_CDS_frequency.csv") %>%
+  gather(sample, frequency, -read_length)
+
+write.csv(CDS_mapped_freq, "results/gathered_CDS_mapped_freq.csv")
+
+CDS_mapped_freq_timepoint <- read.csv("results/gathered_CDS_mapped_freq_timepoint.csv")
+
+CDS_mapped_freq_timepoint$timepoint <- factor(CDS_mapped_freq_timepoint$timepoint, levels=c("0hr", "6hr", "24hr"))
+
+freq_readlength_plot <- ggplot(CDS_mapped_freq_timepoint, aes(x = read_length, y = frequency, color = sample))+
+  geom_line()+
+  geom_vline(xintercept = 28, color = "red", linetype = "dashed")+
+  facet_wrap(~timepoint, nrow = 3)+
+  ylim(0, 18)+
+  xlim(15, 41)+
+  labs(y = "frequency (%)",
+       x = "read length", 
+       title = "Read length distribution for footprints mapping to CDS" )
+
+ggsave(filename = "results/freq_readlength_plot.png", plot = freq_readlength_plot, width = 20, height = 20, dpi = 300, units = "cm")
+
+```
+
+```{r}
+library(readr)
+
+sample1_total_reads <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS))
+
+sample1_mapped_reads <- read.csv("data/sample1_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  filter(CDS >0 ) %>% 
+  mutate(RPM = CDS/sample1_total_reads$total_reads) %>% 
+  mutate(RPKM = RPM/Length)
+  group_by(homo.sapiens) %>% 
+  summarise(mapped_reads = sum(CDS)) %>% 
+  mutate(percent_viral = mapped_reads/(mapped_reads+lead(mapped_reads))*100) %>% 
+  mutate(percent_human = mapped_reads/(mapped_reads+lag(mapped_reads))*100)
+
+
+
+
+```
+
