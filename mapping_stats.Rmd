@@ -122,21 +122,182 @@ ggsave(filename = "results/freq_readlength_plot.png", plot = freq_readlength_plo
 library(readr)
 
 sample1_total_reads <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
-  summarise(total_reads = sum(CDS))
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s1")
+sample1_RPKM_stats <- read.csv("data/sample1_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host, Chr) %>%
+  mutate(sample = "s1") %>%
+  mutate(timepoint = "0hr") %>%
+  mutate(RPM = (CDS/sample1_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>% 
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
 
-sample1_mapped_reads <- read.csv("data/sample1_CDS.csv", skip = 1) %>%
+sample2_total_reads <- read.csv("data/sample2_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s2")
+sample2_RPKM_stats <- read.csv("data/sample2_CDS.csv", skip = 1) %>%
   mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
   dplyr::select(Geneid, Length, CDS, host) %>%
-  filter(CDS >0 ) %>% 
-  mutate(RPM = CDS/sample1_total_reads$total_reads) %>% 
-  mutate(RPKM = RPM/Length)
-  group_by(homo.sapiens) %>% 
-  summarise(mapped_reads = sum(CDS)) %>% 
-  mutate(percent_viral = mapped_reads/(mapped_reads+lead(mapped_reads))*100) %>% 
-  mutate(percent_human = mapped_reads/(mapped_reads+lag(mapped_reads))*100)
+  mutate(sample = "s2") %>%
+  mutate(timepoint = "0hr") %>%
+  mutate(RPM = (CDS/sample2_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>% 
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
+
+sample3_total_reads <- read.csv("data/sample3_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s3")
+sample3_RPKM_stats <- read.csv("data/sample3_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s3") %>%
+  mutate(timepoint = "0hr") %>%
+  mutate(RPM = (CDS/sample3_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>% 
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
+
+sample4_total_reads <- read.csv("data/sample4_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s4")
+sample4_RPKM_stats <- read.csv("data/sample4_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s4") %>%
+  mutate(timepoint = "6hr") %>%
+  mutate(RPM = (CDS/sample4_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>% 
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
+
+sample5_total_reads <- read.csv("data/sample5_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s5")
+sample5_RPKM_stats <- read.csv("data/sample5_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s5") %>%
+  mutate(timepoint = "6hr") %>%
+  mutate(RPM = (CDS/sample5_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>%
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
+
+sample6_total_reads <- read.csv("data/sample6_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s6")
+sample6_RPKM_stats <- read.csv("data/sample6_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s6") %>%
+  mutate(timepoint = "6hr") %>%
+  mutate(RPM = (CDS/sample6_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>%
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
 
 
+sample7_total_reads <- read.csv("data/sample7_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s7")
+sample7_RPKM_stats <- read.csv("data/sample7_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s7") %>%
+  mutate(timepoint = "24hr") %>%
+  mutate(RPM = (CDS/sample7_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>%
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
+
+
+sample8_total_reads <- read.csv("data/sample8_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s8")
+sample8_RPKM_stats <- read.csv("data/sample8_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s8") %>%
+  mutate(timepoint = "24hr") %>%
+  mutate(RPM = (CDS/sample8_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>%
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM))
+
+sample9_total_reads <- read.csv("data/sample9_CDS.csv", skip =1) %>% 
+  summarise(total_reads = sum(CDS)) %>% 
+  mutate(sample= "s9")
+sample9_RPKM_stats <- read.csv("data/sample9_CDS.csv", skip = 1) %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  dplyr::select(Geneid, Length, CDS, host) %>%
+  mutate(sample = "s9") %>%
+  mutate(timepoint = "24hr") %>%
+  mutate(RPM = (CDS/sample9_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  filter(RPKM >100 ) %>%
+  group_by(host, sample, timepoint) %>% 
+  summarise(RPKM_mean_per_gene = mean(RPKM)) 
+
+all_samples_libsize <- bind_rows(sample1_total_reads, sample2_total_reads, sample3_total_reads, sample4_total_reads, sample5_total_reads, sample6_total_reads, sample7_total_reads, sample8_total_reads, sample9_total_reads)
+
+all_samples <- bind_rows(sample2_RPKM_stats, sample3_RPKM_stats, sample4_RPKM_stats, sample5_RPKM_stats, sample6_RPKM_stats, sample7_RPKM_stats, sample8_RPKM_stats, sample9_RPKM_stats) %>% 
+  mutate(genome = str_replace_all(host, c("FALSE" = "SARSCOV2", "TRUE" = "human")))
+  
+all_samples$timepoint <- factor(all_samples$timepoint, levels = c("0hr", "6hr", "24hr"))  
+
+plot_RPKM <- ggplot(all_samples, aes(y= RPKM_mean_per_gene, x= timepoint, color = genome))+
+  geom_boxplot()+
+  scale_y_log10()
 
 
 ```
+```{r  using mitochondially encoded genes to act as normalisation control }
+
+sample1 <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  mutate(sample = "s1")
+
+sample1_select <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  dplyr::rename(s1 = CDS)
+sample2_select <- read.csv("data/sample2_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM")%>% 
+  dplyr::rename(s2 = CDS)
+sample3_select <- read.csv("data/sample3_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM")%>% 
+  dplyr::rename(s3 = CDS)
+sample4_select <- read.csv("data/sample4_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  dplyr::rename(s4 = CDS)
+sample5_select <- read.csv("data/sample5_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  dplyr::rename(s5 = CDS)
+sample6_select <- read.csv("data/sample6_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  dplyr::rename(s6 = CDS)
+sample7_select <- read.csv("data/sample7_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  dplyr::rename(s7 = CDS)
+sample8_select <- read.csv("data/sample8_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM")%>% 
+  dplyr::rename(s8 = CDS)
+sample9_select <- read.csv("data/sample9_CDS.csv", skip =1) %>% 
+  filter(Chr == "chrM") %>% 
+  dplyr::rename(s9 = CDS)
+
+all_samples_chrM <- bind_cols(sample1$Geneid,
+                              sample1_select$s1,sample1_select$s1,sample1_select$s1,sample2_select$s2,sample3_select$s3,sample4_select$s4,
+                              sample5_select$s5,sample6_select$s6,sample7_select$s7,sample8_select$s8,sample9_select$s9)
+
 
