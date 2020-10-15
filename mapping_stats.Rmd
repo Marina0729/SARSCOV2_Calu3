@@ -264,40 +264,50 @@ plot_RPKM <- ggplot(all_samples, aes(y= RPKM_mean_per_gene, x= timepoint, color 
 ```
 ```{r  using mitochondially encoded genes to act as normalisation control }
 
-sample1 <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
+#Building a counts table for DESeq2
+Geneid <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>% 
-  mutate(sample = "s1")
+  dplyr::select(Geneid, length)
 
 sample1_select <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM") %>% 
-  dplyr::rename(s1 = CDS)
+  filter(Chr == "chrM") %>%
+  dplyr::rename(s1 = CDS) %>% 
+  dplyr::select(s1)
 sample2_select <- read.csv("data/sample2_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM")%>% 
-  dplyr::rename(s2 = CDS)
+  filter(Chr == "chrM")%>%
+  dplyr::rename(s2 = CDS) %>% 
+  dplyr::select(s2)
 sample3_select <- read.csv("data/sample3_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM")%>% 
-  dplyr::rename(s3 = CDS)
+  filter(Chr == "chrM")%>%
+  dplyr::rename(s3 = CDS) %>% 
+  dplyr::select(s3)
 sample4_select <- read.csv("data/sample4_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM") %>% 
-  dplyr::rename(s4 = CDS)
+  filter(Chr == "chrM") %>%
+  dplyr::rename(s4 = CDS) %>% 
+  dplyr::select(s4)
 sample5_select <- read.csv("data/sample5_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM") %>% 
-  dplyr::rename(s5 = CDS)
+  filter(Chr == "chrM") %>%
+  dplyr::rename(s5 = CDS) %>% 
+  dplyr::select(s5)
 sample6_select <- read.csv("data/sample6_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM") %>% 
-  dplyr::rename(s6 = CDS)
+  filter(Chr == "chrM") %>%
+  dplyr::rename(s6 = CDS) %>% 
+  dplyr::select(s6)
 sample7_select <- read.csv("data/sample7_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM") %>% 
-  dplyr::rename(s7 = CDS)
+  filter(Chr == "chrM") %>%
+  dplyr::rename(s7 = CDS) %>% 
+  dplyr::select(s7)
 sample8_select <- read.csv("data/sample8_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM")%>% 
-  dplyr::rename(s8 = CDS)
+  filter(Chr == "chrM")%>%
+  dplyr::rename(s8 = CDS) %>% 
+  dplyr::select(s8)
 sample9_select <- read.csv("data/sample9_CDS.csv", skip =1) %>% 
-  filter(Chr == "chrM") %>% 
-  dplyr::rename(s9 = CDS)
+  filter(Chr == "chrM") %>%
+  dplyr::rename(s9 = CDS) %>% 
+  dplyr::select(s9)
 
-all_samples_chrM <- bind_cols(sample1$Geneid,
-                              sample1_select$s1,sample1_select$s1,sample1_select$s1,sample2_select$s2,sample3_select$s3,sample4_select$s4,
-                              sample5_select$s5,sample6_select$s6,sample7_select$s7,sample8_select$s8,sample9_select$s9)
+all_samples_chrM <- bind_cols(Geneid,sample1_select,sample2_select,sample3_select,sample4_select,sample5_select,sample6_select,
+                              sample7_select,sample8_select,sample9_select)
+write.csv(all_samples_chrM, "data/chrM_CDS_counts")
 
-
+```
