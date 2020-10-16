@@ -249,8 +249,12 @@ sample9_RPKM_stats <- read.csv("data/sample9_CDS.csv", skip = 1) %>%
   group_by(host, sample, timepoint) %>% 
   summarise(RPKM_mean_per_gene = mean(RPKM)) 
 
-all_samples_libsize <- bind_rows(sample1_total_reads, sample2_total_reads, sample3_total_reads, sample4_total_reads, sample5_total_reads, sample6_total_reads, sample7_total_reads, sample8_total_reads, sample9_total_reads)
+all_samples_RF_libsize <- bind_rows(sample1_total_reads, sample2_total_reads, sample3_total_reads, sample4_total_reads, sample5_total_reads, sample6_total_reads, sample7_total_reads, sample8_total_reads, sample9_total_reads) %>% 
+  mutate(sample = str_replace_all(sample, c("s1" = "RF_CDS_s1", "s2" = "RF_CDS_s2", "s3" = "RF_CDS_s3", "s4" = "RF_CDS_s4", "s5" = "RF_CDS_s5",
+                                            "s6" = "RF_CDS_s6", "s7" = "RF_CDS_s7", "s8" = "RF_CDS_s8", "s9" = "RF_CDS_s9")))
 
+
+                                       
 all_samples <- bind_rows(sample2_RPKM_stats, sample3_RPKM_stats, sample4_RPKM_stats, sample5_RPKM_stats, sample6_RPKM_stats, sample7_RPKM_stats, sample8_RPKM_stats, sample9_RPKM_stats) %>% 
   mutate(genome = str_replace_all(host, c("FALSE" = "SARSCOV2", "TRUE" = "human")))
   
@@ -262,52 +266,271 @@ plot_RPKM <- ggplot(all_samples, aes(y= RPKM_mean_per_gene, x= timepoint, color 
 
 
 ```
+
+```{r making a counts table with mRNA and footprints}
+
+######### mRNA counts table #####################
+
+mRNA_genes <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
+  dplyr::select(Geneid, Chr, Length)
+
+mRNA_sample1 <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s1)
+mRNA_sample2 <- read.csv("data/mRNA_CDS_02.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s2)
+mRNA_sample3 <- read.csv("data/mRNA_CDS_03.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s3)
+mRNA_sample4 <- read.csv("data/mRNA_CDS_04.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s4)
+mRNA_sample5 <- read.csv("data/mRNA_CDS_05.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s5)
+mRNA_sample6 <- read.csv("data/mRNA_CDS_06.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s6)
+mRNA_sample7 <- read.csv("data/mRNA_CDS_07.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s7)
+mRNA_sample8 <- read.csv("data/mRNA_CDS_08.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s8)
+mRNA_sample9 <- read.csv("data/mRNA_CDS_09.csv", skip =1) %>% 
+  dplyr::select(mRNA_CDS_s9)
+
+##### total read counts ############
+sample1_total_reads_mRNA <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s1)) %>%
+   mutate(sample= "mRNA_CDS_s1")
+sample2_total_reads_mRNA <- read.csv("data/mRNA_CDS_02.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s2)) %>% 
+  mutate(sample= "mRNA_CDS_s2")
+sample3_total_reads_mRNA <- read.csv("data/mRNA_CDS_03.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s3)) %>% 
+  mutate(sample= "mRNA_CDS_s3")
+sample4_total_reads_mRNA <- read.csv("data/mRNA_CDS_04.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s4)) %>% 
+  mutate(sample= "mRNA_CDS_s4")
+sample5_total_reads_mRNA <- read.csv("data/mRNA_CDS_05.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s5)) %>% 
+  mutate(sample= "mRNA_CDS_s5")
+sample6_total_reads_mRNA <- read.csv("data/mRNA_CDS_06.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s6)) %>% 
+  mutate(sample= "mRNA_CDS_s6")
+sample7_total_reads_mRNA <- read.csv("data/mRNA_CDS_07.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s7)) %>% 
+  mutate(sample= "mRNA_CDS_s7")
+sample8_total_reads_mRNA <- read.csv("data/mRNA_CDS_08.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s8)) %>% 
+  mutate(sample= "mRNA_CDS_s8")
+sample9_total_reads_mRNA <- read.csv("data/mRNA_CDS_09.csv", skip =1) %>% 
+  summarise(total_reads = sum(mRNA_CDS_s9)) %>% 
+  mutate(sample= "mRNA_CDS_s9")
+
+all_samples_mRNA_libsize <- bind_rows(sample1_total_reads_mRNA, sample2_total_reads_mRNA, sample3_total_reads_mRNA, sample4_total_reads_mRNA,
+                                      sample5_total_reads_mRNA,sample6_total_reads_mRNA, sample7_total_reads_mRNA, sample8_total_reads_mRNA,
+                                      sample9_total_reads_mRNA)
+
+mRNA_CDS_counts <- bind_cols(mRNA_genes,mRNA_sample1, mRNA_sample2, mRNA_sample3, mRNA_sample4, mRNA_sample5, mRNA_sample6, mRNA_sample7,
+                             mRNA_sample8, mRNA_sample9)
+
+######### same for ribosome footprints #####################
+
+
+RF_genes <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
+  dplyr::select(Geneid, Chr, Length)
+
+RF_sample1 <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s1= CDS) %>% 
+  dplyr::select(RF_CDS_s1)
+RF_sample2 <- read.csv("data/sample2_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s2= CDS) %>% 
+  dplyr::select(RF_CDS_s2)
+RF_sample3 <- read.csv("data/sample3_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s3= CDS) %>% 
+  dplyr::select(RF_CDS_s3)
+RF_sample4 <- read.csv("data/sample4_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s4= CDS) %>% 
+  dplyr::select(RF_CDS_s4)
+RF_sample5 <- read.csv("data/sample5_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s5= CDS) %>% 
+  dplyr::select(RF_CDS_s5)
+RF_sample6 <- read.csv("data/sample6_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s6= CDS) %>% 
+  dplyr::select(RF_CDS_s6)
+RF_sample7 <- read.csv("data/sample7_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s7= CDS) %>% 
+  dplyr::select(RF_CDS_s7)
+RF_sample8 <- read.csv("data/sample8_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s8= CDS) %>% 
+  dplyr::select(RF_CDS_s8)
+RF_sample9 <- read.csv("data/sample9_CDS.csv", skip =1) %>% 
+  dplyr::rename(RF_CDS_s9= CDS) %>% 
+  dplyr::select(RF_CDS_s9)
+
+RF_CDS_counts <- bind_cols(RF_genes,RF_sample1, RF_sample2, RF_sample3, RF_sample4, RF_sample5, RF_sample6, RF_sample7,
+                             RF_sample8, RF_sample9)
+
+RF_mRNA_raw_counts <- left_join(mRNA_CDS_counts,RF_CDS_counts, by = "Geneid" ) %>% 
+  dplyr::select(-Chr.y,-Length.y ) %>% 
+  dplyr::rename(Chr =Chr.x) %>% 
+  dplyr::rename(Length =Length.x) %>% 
+  filter(Geneid != "ORF1a")
+
+############### CPM normalization ##########
+
+RF_gather_join_normalize <- RF_CDS_counts %>% 
+  gather(sample, counts, -Geneid, - Chr, -Length) %>% 
+  left_join(all_samples_RF_libsize, by = "sample") %>%
+  mutate(cpm_RF = (counts/total_reads)*1000000) %>% 
+  mutate(RPKM_RF = (cpm_RF/Length)*1000 ) %>%
+  dplyr::select(Geneid, sample, RPKM_RF) %>% 
+  spread(sample, RPKM_RF, drop = TRUE) %>% 
+  filter(RF_CDS_s1>5 & RF_CDS_s2>5 & RF_CDS_s3>5 & RF_CDS_s4>5 & RF_CDS_s5>5 & RF_CDS_s6>5)
+
+tail(RF_gather_join_normalize, 10)
+
+mRNA_gather_join_normalize <- mRNA_CDS_counts %>% 
+  gather(sample, counts, -Geneid, - Chr, -Length) %>% 
+  left_join(all_samples_mRNA_libsize, by = "sample") %>%
+  mutate(cpm_mRNA = (counts/total_reads)*1000000) %>% 
+  mutate(RPKM_mRNA = (cpm_mRNA/Length)*1000 ) %>%
+  dplyr::select(Geneid, sample, RPKM_mRNA) %>% 
+  spread(sample, RPKM_mRNA, drop = TRUE)
+  
+  
+TE_table <- left_join(RF_gather_join_normalize,mRNA_gather_join_normalize, by = "Geneid") %>% 
+  mutate(TE_s1 = RF_CDS_s1/mRNA_CDS_s1) %>% 
+  mutate(TE_s2 = RF_CDS_s2/mRNA_CDS_s2) %>% 
+  mutate(TE_s3 = RF_CDS_s3/mRNA_CDS_s3) %>% 
+  mutate(TE_s4 = RF_CDS_s4/mRNA_CDS_s4) %>% 
+  mutate(TE_s5 = RF_CDS_s5/mRNA_CDS_s5) %>% 
+  mutate(TE_s6 = RF_CDS_s6/mRNA_CDS_s6) %>% 
+  mutate(TE_s7 = RF_CDS_s7/mRNA_CDS_s7) %>% 
+  mutate(TE_s8 = RF_CDS_s8/mRNA_CDS_s8) %>% 
+  mutate(TE_s9 = RF_CDS_s9/mRNA_CDS_s9) %>% 
+  dplyr::select(Geneid,TE_s1, TE_s2, TE_s3, TE_s4, TE_s5, TE_s6, TE_s7, TE_s8, TE_s9) %>% 
+  left_join(mRNA_genes, by = "Geneid")
+  
+
+  
+  
+  dplyr::select(-Chr.y,-Length.y ) %>% 
+  dplyr::rename(Chr =Chr.x) %>% 
+  dplyr::rename(Length =Length.x) %>% 
+  filter(Geneid != "ORF1a")
+  
+
+```
+
 ```{r  using mitochondially encoded genes to act as normalisation control }
 
 #Building a counts table for DESeq2
 Geneid <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>% 
-  dplyr::select(Geneid, length)
+  dplyr::select(Geneid)
 
 sample1_select <- read.csv("data/sample1_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>%
-  dplyr::rename(s1 = CDS) %>% 
-  dplyr::select(s1)
+  mutate(RPM = (CDS/sample1_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s1 = RPKM) %>% 
+  dplyr::select(RF_CDS_s1) 
 sample2_select <- read.csv("data/sample2_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM")%>%
-  dplyr::rename(s2 = CDS) %>% 
-  dplyr::select(s2)
+  mutate(RPM = (CDS/sample2_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s2 = RPKM) %>% 
+  dplyr::select(RF_CDS_s2)
 sample3_select <- read.csv("data/sample3_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM")%>%
-  dplyr::rename(s3 = CDS) %>% 
-  dplyr::select(s3)
+  mutate(RPM = (CDS/sample3_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s3 = RPKM) %>% 
+  dplyr::select(RF_CDS_s3)
 sample4_select <- read.csv("data/sample4_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>%
-  dplyr::rename(s4 = CDS) %>% 
-  dplyr::select(s4)
+  mutate(RPM = (CDS/sample4_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s4 = RPKM) %>% 
+  dplyr::select(RF_CDS_s4)
 sample5_select <- read.csv("data/sample5_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>%
-  dplyr::rename(s5 = CDS) %>% 
-  dplyr::select(s5)
+  mutate(RPM = (CDS/sample5_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s5 = RPKM) %>% 
+  dplyr::select(RF_CDS_s5)
 sample6_select <- read.csv("data/sample6_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>%
-  dplyr::rename(s6 = CDS) %>% 
-  dplyr::select(s6)
+  mutate(RPM = (CDS/sample6_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s6 = RPKM) %>% 
+  dplyr::select(RF_CDS_s6)
 sample7_select <- read.csv("data/sample7_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>%
-  dplyr::rename(s7 = CDS) %>% 
-  dplyr::select(s7)
+  mutate(RPM = (CDS/sample7_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s7 = RPKM) %>% 
+  dplyr::select(RF_CDS_s7)
 sample8_select <- read.csv("data/sample8_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM")%>%
-  dplyr::rename(s8 = CDS) %>% 
-  dplyr::select(s8)
+  mutate(RPM = (CDS/sample8_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s8 = RPKM) %>% 
+  dplyr::select(RF_CDS_s8)
 sample9_select <- read.csv("data/sample9_CDS.csv", skip =1) %>% 
   filter(Chr == "chrM") %>%
-  dplyr::rename(s9 = CDS) %>% 
-  dplyr::select(s9)
+  mutate(RPM = (CDS/sample9_total_reads$total_reads)*1000000) %>% 
+  mutate(RPKM = (RPM/Length)*1000) %>%
+  dplyr::rename(RF_CDS_s9 = RPKM) %>% 
+  dplyr::select(RF_CDS_s9)
 
 all_samples_chrM <- bind_cols(Geneid,sample1_select,sample2_select,sample3_select,sample4_select,sample5_select,sample6_select,
                               sample7_select,sample8_select,sample9_select)
-write.csv(all_samples_chrM, "data/chrM_CDS_counts")
+
+write.csv(all_samples_chrM, "data/chrM_normalized_CDS_counts.csv")
 
 ```
+
+```{r}
+
+#join with the counts data 
+
+metadata <- read.csv("data/SARSCOV2_riboseq_metadata.csv")
+
+mito_expression <- read_csv("data/chrM_normalized_CDS_counts.csv") %>%
+  dplyr::select(-X1) %>% 
+  gather(sample, norm_counts, -Geneid) %>%
+  left_join(metadata, by = "sample")
+
+#scale gene expression for all samples 
+scaled_genes <- mito_expression %>%
+  spread(Geneid, norm_counts) %>%
+  dplyr::select(-infection, -condition, -timepoint) %>%
+  column_to_rownames("sample") %>% 
+  scale()
+
+
+#use the prcomp function on scaled samples
+pca_genes <- prcomp(scaled_genes)
+
+#tidy data frame for plotting
+PCA_data <- pca_genes$x %>% 
+  as_tibble(rownames = "sample") %>%
+  gather(PC, variance, -sample) %>% 
+  left_join(metadata, by = "sample") %>%
+  spread(PC, variance)
+
+#plot to examine variance for all samples 
+pca_plot_sample <- ggplot(PCA_data, aes(x = PC1, y = PC2, color = infection)) +
+  geom_text(aes(label = sample), size = 4)+
+  labs(title = "PCA on normalized mitochondrial CDS counts")
+
+mito_expression_plot <- ggplot(mito_expression, aes(y = Geneid , x= norm_counts, color = infection))+
+  geom_jitter(width = 0.1)+
+  labs(title = "Mitochondrial translation")
+  
+ggsave(filename = "results/pca_plot_mito_genes.png", plot = pca_plot_sample, width = 12, height = 10, dpi = 300, units = "cm")
+
+
+```
+
+```{r}
+mito
+```
+
