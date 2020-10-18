@@ -773,3 +773,58 @@ TE_table <- left_join(TPM_RF, TPM_mRNA, by ="Geneid" ) %>%
 ```
 
 
+```{r}
+metadata <- read.csv("data/SARSCOV2_riboseq_metadata.csv")
+
+immune_genes <- read.csv("data/InnateDB_genes.csv") %>% 
+  filter(species == "Homo sapiens") %>% 
+  dplyr::rename(Geneid = ensembl) %>% 
+  dplyr::select(Geneid, name, function.)
+
+TE_table_metadata <- read.csv("data/TE_table_correct.csv") %>% 
+  gather(sample, TE, -Geneid, -host) %>% 
+  left_join(metadata, by = "sample") %>%
+  mutate(Geneid = gsub("\\.\\d+$","", Geneid)) %>%
+  left_join(immune_genes) %>% 
+  mutate(genome = ifelse(host == "TRUE", "host", "virus")) %>% 
+  dplyr::select(-host) %>% 
+  mutate(ontology = ifelse(name != "NA", "innate immune", "other")) %>% 
+  filter(TE < 50)
+
+TE_infected_6hr <- TE_table_metadata %>% 
+  filter(timepoint == "6hr") %>% 
+  dplyr::select(Geneid, TE, genome, ontology, name) %>% 
+  dplyr::rename(TE_6hr = TE)
+
+TE_uninfected <- TE_table_metadata %>% 
+  filter(condition == "uninfected") %>% 
+  dplyr::select(Geneid, TE, genome, ontology, name) %>% 
+  dplyr::rename(TE_uninfected = TE)
+
+combinded_TE <- left_join(TE_infected_6hr,TE_uninfected) %>% 
+  filter(ontology == "innate immune")
+
+TE_uninfected_above30 <- combinded_TE %>% 
+  filter(TE_uninfected >25, TE_uninfected <50) %>% 
+  filter(Geneid == "ENSG00000105810"| Geneid == "ENSG00000137801") %>%
+  filter(TE_6hr <15, TE_6hr >11 )
+  
+
+plot_6hr_50 <- ggplot(combinded_TE, aes(x = TE_uninfected, y = TE_6hr))+
+  geom_point(alpha = 0.15, size = 2)+
+  ylim(0, 50)+
+  geom_abline(color = "red", linetype = "dashed")+
+  geom_text(data = TE_uninfected_above30, aes(x = TE_uninfected, y = TE_6hr, label = name), 
+             hjust = 0.5, vjust = -0.5, size = 4, check_overlap=TRUE)
+  
+plot_6hr_10 <- ggplot(combinded_TE, aes(x = TE_uninfected, y = TE_6hr))+
+  geom_point(alpha = 0.1, size = 2)+
+  ylim(0, 10)+
+  xlim(0, 10)+
+  geom_abline(color = "red", linetype = "dashed")
+
+ggsave(filename = "results/plot_6hr_scatter_50.png", plot = plot_6hr_50, width = 20, height = 20, dpi = 600, units = "cm")
+ggsave(filename = "results/plot_6hr_scatter_10.png", plot = plot_6hr_10, width = 20, height = 20, dpi = 600, units = "cm")
+```
+
+
