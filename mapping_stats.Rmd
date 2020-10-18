@@ -329,6 +329,8 @@ all_samples_mRNA_libsize <- bind_rows(sample1_total_reads_mRNA, sample2_total_re
 mRNA_CDS_counts <- bind_cols(mRNA_genes,mRNA_sample1, mRNA_sample2, mRNA_sample3, mRNA_sample4, mRNA_sample5, mRNA_sample6, mRNA_sample7,
                              mRNA_sample8, mRNA_sample9)
 
+write.csv(mRNA_CDS_counts, "data/mRNA_CDS_counts.csv")
+
 ######### same for ribosome footprints #####################
 
 
@@ -366,6 +368,8 @@ RF_sample9 <- read.csv("data/sample9_CDS.csv", skip =1) %>%
 RF_CDS_counts <- bind_cols(RF_genes,RF_sample1, RF_sample2, RF_sample3, RF_sample4, RF_sample5, RF_sample6, RF_sample7,
                              RF_sample8, RF_sample9)
 
+write.csv(RF_CDS_counts, "data/RF_CDS_counts.csv")
+
 RF_mRNA_raw_counts <- left_join(mRNA_CDS_counts,RF_CDS_counts, by = "Geneid" ) %>% 
   dplyr::select(-Chr.y,-Length.y ) %>% 
   dplyr::rename(Chr =Chr.x) %>% 
@@ -374,16 +378,28 @@ RF_mRNA_raw_counts <- left_join(mRNA_CDS_counts,RF_CDS_counts, by = "Geneid" ) %
 
 ############### CPM normalization ##########
 
-RF_gather_join_normalize <- RF_CDS_counts %>% 
+RF_gather_join_normalize_host <- RF_CDS_counts %>% 
   gather(sample, counts, -Geneid, - Chr, -Length) %>% 
   left_join(all_samples_RF_libsize, by = "sample") %>%
   mutate(cpm_RF = (counts/total_reads)*1000000) %>% 
   mutate(RPKM_RF = (cpm_RF/Length)*1000 ) %>%
   dplyr::select(Geneid, sample, RPKM_RF) %>% 
   spread(sample, RPKM_RF, drop = TRUE) %>% 
-  filter(RF_CDS_s1>5 & RF_CDS_s2>5 & RF_CDS_s3>5 & RF_CDS_s4>5 & RF_CDS_s5>5 & RF_CDS_s6>5)
+  filter(str_detect(Geneid, "ENSG"), RF_CDS_s1>5 , RF_CDS_s2>5 , RF_CDS_s3>5 , RF_CDS_s4>5 , RF_CDS_s5>5 , RF_CDS_s6>5) %>%
+  left_join(mRNA_genes, by = "Geneid")
 
-tail(RF_gather_join_normalize, 10)
+RF_gather_join_normalize_virus <- RF_CDS_counts %>% 
+  gather(sample, counts, -Geneid, - Chr, -Length) %>% 
+  left_join(all_samples_RF_libsize, by = "sample") %>%
+  mutate(cpm_RF = (counts/total_reads)*1000000) %>% 
+  mutate(RPKM_RF = (cpm_RF/Length)*1000 ) %>%
+  dplyr::select(Geneid, sample, RPKM_RF) %>% 
+  spread(sample, RPKM_RF, drop = TRUE) %>%
+  left_join(mRNA_genes, by = "Geneid") %>%
+  filter(str_detect(Chr, "NC")) %>%
+  filter(Geneid != "ORF1a")
+          
+norm_RF_counts <- bind_rows(RF_gather_join_normalize_virus,RF_gather_join_normalize_host )
 
 mRNA_gather_join_normalize <- mRNA_CDS_counts %>% 
   gather(sample, counts, -Geneid, - Chr, -Length) %>% 
@@ -392,9 +408,10 @@ mRNA_gather_join_normalize <- mRNA_CDS_counts %>%
   mutate(RPKM_mRNA = (cpm_mRNA/Length)*1000 ) %>%
   dplyr::select(Geneid, sample, RPKM_mRNA) %>% 
   spread(sample, RPKM_mRNA, drop = TRUE)
+
+tail(mRNA_gather_join_normalize, 11)
   
-  
-TE_table <- left_join(RF_gather_join_normalize,mRNA_gather_join_normalize, by = "Geneid") %>% 
+TE_table <- left_join(norm_RF_counts,mRNA_gather_join_normalize, by = "Geneid") %>% 
   mutate(TE_s1 = RF_CDS_s1/mRNA_CDS_s1) %>% 
   mutate(TE_s2 = RF_CDS_s2/mRNA_CDS_s2) %>% 
   mutate(TE_s3 = RF_CDS_s3/mRNA_CDS_s3) %>% 
@@ -406,15 +423,9 @@ TE_table <- left_join(RF_gather_join_normalize,mRNA_gather_join_normalize, by = 
   mutate(TE_s9 = RF_CDS_s9/mRNA_CDS_s9) %>% 
   dplyr::select(Geneid,TE_s1, TE_s2, TE_s3, TE_s4, TE_s5, TE_s6, TE_s7, TE_s8, TE_s9) %>% 
   left_join(mRNA_genes, by = "Geneid")
-  
 
-  
-  
-  dplyr::select(-Chr.y,-Length.y ) %>% 
-  dplyr::rename(Chr =Chr.x) %>% 
-  dplyr::rename(Length =Length.x) %>% 
-  filter(Geneid != "ORF1a")
-  
+#### looking at mitochondrial transcripts 
+TE_tabl
 
 ```
 
@@ -530,7 +541,157 @@ ggsave(filename = "results/pca_plot_mito_genes.png", plot = pca_plot_sample, wid
 
 ```
 
+```{r   GeTMM using TMM normalization on length corrected transcripts}
+
+RF_counts <- read.csv("data/RF_CDS_counts.csv")
+mRNA_counts <- read.csv("data/mRNA_CDS_counts.csv")
+
+################# Ribosome fragments ##################################
+#subset the mitogenes
+mito_RF_counts <- RF_counts %>%
+  dplyr::select(-X) %>% 
+  filter(Chr == "chrM") %>% 
+  mutate(RF_K_s1 = (RF_CDS_s1/Length)*1000) %>% 
+  mutate(RF_K_s2 = (RF_CDS_s2/Length)*1000) %>% 
+  mutate(RF_K_s3 = (RF_CDS_s3/Length)*1000) %>% 
+  mutate(RF_K_s4 = (RF_CDS_s4/Length)*1000) %>% 
+  mutate(RF_K_s5 = (RF_CDS_s5/Length)*1000) %>%
+  mutate(RF_K_s6 = (RF_CDS_s6/Length)*1000) %>% 
+  mutate(RF_K_s7 = (RF_CDS_s7/Length)*1000) %>% 
+  mutate(RF_K_s8 = (RF_CDS_s8/Length)*1000) %>% 
+  mutate(RF_K_s9 = (RF_CDS_s9/Length)*1000) %>% 
+  dplyr::select(Geneid,RF_K_s1, RF_K_s2, RF_K_s3,RF_K_s4, RF_K_s5, RF_K_s6,RF_K_s7, RF_K_s8,RF_K_s9) %>% 
+  column_to_rownames("Geneid")
+
+library(edgeR)
+
+#GeTMM
+# for normalization purposes, no grouping of samples
+group_RF <- c(rep("A",ncol(mito_RF_counts)))
+mito_RF_norm <- DGEList(counts=mito_RF_counts,group=group_RF)
+mito_RF_norm <- calcNormFactors(mito_RF_norm, method = "TMM")
+mito_RF_norm_edgeR <- cpm(mito_RF_norm)
+
+plot_boxplot_norm_RF <- mito_RF_norm_edgeR %>% 
+  as_tibble(rownames = "Geneid") %>%
+  gather(sample, norm_RF_K, -Geneid) %>%
+  ggplot(aes(x= sample, y = norm_RF_K))+
+  geom_boxplot()+
+  scale_y_log10()+
+  labs(y = "Ribosome fragment normalized TPM")
+
+
+group_RF <- c(rep("A",ncol(mito_RF_counts)))
+mito_RF <- DGEList(counts=mito_RF_counts,group=group_RF)
+mito_RF <- calcNormFactors(mito_RF, method = "none")
+mito_RF_edgeR <- cpm(mito_RF)
+
+plot_boxplot_RF <- mito_RF_edgeR %>% 
+  as_tibble(rownames = "Geneid") %>%
+  gather(sample, RF_K, -Geneid) %>%
+  ggplot(aes(x= sample, y = RF_K))+
+  geom_boxplot()+
+  scale_y_log10()+
+  labs(y = "Ribosome fragment TPM")
+
+boxplot_normalize_RF <- plot_grid(plot_boxplot_RF,plot_boxplot_norm_RF, ncol = 1)
+
+ggsave(filename = "results/boxplot_normalize_RF_TMM.png", plot = boxplot_normalize_RF, width = 20, height = 15, dpi = 600, units = "cm")
+
+################## mRNA ####################################
+
+mito_mRNA_counts <- mRNA_counts %>%
+  dplyr::select(-X) %>% 
+  filter(Chr == "chrM") %>% 
+  mutate(mRNA_K_s1 = (mRNA_CDS_s1/Length)*1000) %>% 
+  mutate(mRNA_K_s2 = (mRNA_CDS_s2/Length)*1000) %>% 
+  mutate(mRNA_K_s3 = (mRNA_CDS_s3/Length)*1000) %>% 
+  mutate(mRNA_K_s4 = (mRNA_CDS_s4/Length)*1000) %>% 
+  mutate(mRNA_K_s5 = (mRNA_CDS_s5/Length)*1000) %>%
+  mutate(mRNA_K_s6 = (mRNA_CDS_s6/Length)*1000) %>% 
+  mutate(mRNA_K_s7 = (mRNA_CDS_s7/Length)*1000) %>% 
+  mutate(mRNA_K_s8 = (mRNA_CDS_s8/Length)*1000) %>% 
+  mutate(mRNA_K_s9 = (mRNA_CDS_s9/Length)*1000) %>%
+  dplyr::select(Geneid,mRNA_K_s1, mRNA_K_s2, mRNA_K_s3, mRNA_K_s4, mRNA_K_s5, mRNA_K_s6,mRNA_K_s7, mRNA_K_s8,mRNA_K_s9) %>% 
+  column_to_rownames("Geneid")
+
+group_mRNA <- c(rep("A",ncol(mito_mRNA_counts)))
+mito_mRNA_norm <- DGEList(counts=mito_mRNA_counts,group=group_mRNA)
+mito_mRNA_norm <- calcNormFactors(mito_mRNA_norm, method = "TMM")
+mito_mRNA_norm_edgeR <- cpm(mito_mRNA_norm)
+
+plot_boxplot_norm_mRNA <- mito_mRNA_norm_edgeR %>% 
+  as_tibble(rownames = "Geneid") %>%
+  gather(sample, norm_RF_K, -Geneid) %>%
+  ggplot(aes(x= sample, y = norm_RF_K))+
+  geom_boxplot()+
+  scale_y_log10()+
+  labs(y = "mRNA normalized TPM")
+
+group_mRNA <- c(rep("A",ncol(mito_mRNA_counts)))
+mito_mRNA <- DGEList(counts=mito_mRNA_counts,group=group_mRNA)
+mito_mRNA <- calcNormFactors(mito_mRNA, method = "none")
+mito_mRNA_edgeR <- cpm(mito_mRNA)
+
+plot_boxplot_mRNA <- mito_mRNA_edgeR %>% 
+  as_tibble(rownames = "Geneid") %>%
+  gather(sample,mRNA_K, -Geneid) %>%
+  ggplot(aes(x= sample, y = mRNA_K))+
+  geom_boxplot()+
+  scale_y_log10()+
+  labs(y = "mRNA TPM")
+
+boxplot_normalize_mRNA <- plot_grid(plot_boxplot_mRNA,plot_boxplot_norm_mRNA, ncol = 1)
+
+ggsave(filename = "results/boxplot_normalize_mRNA_TMM.png", plot = boxplot_normalize_mRNA, width = 20, height = 15, dpi = 600, units = "cm")
+
+
+
+
+```
+
+
 ```{r}
-mito
+
+#all RF genes
+all_RF_counts <- RF_counts %>%
+  dplyr::select(-X) %>%
+  mutate(RF_K_s1 = (RF_CDS_s1/Length)*1000) %>% 
+  mutate(RF_K_s2 = (RF_CDS_s2/Length)*1000) %>% 
+  mutate(RF_K_s3 = (RF_CDS_s3/Length)*1000) %>% 
+  mutate(RF_K_s4 = (RF_CDS_s4/Length)*1000) %>% 
+  mutate(RF_K_s5 = (RF_CDS_s5/Length)*1000) %>%
+  mutate(RF_K_s6 = (RF_CDS_s6/Length)*1000) %>% 
+  mutate(RF_K_s7 = (RF_CDS_s7/Length)*1000) %>% 
+  mutate(RF_K_s8 = (RF_CDS_s8/Length)*1000) %>% 
+  mutate(RF_K_s9 = (RF_CDS_s9/Length)*1000) %>% 
+  dplyr::select(Geneid,RF_K_s1, RF_K_s2, RF_K_s3,RF_K_s4, RF_K_s5, RF_K_s6,RF_K_s7, RF_K_s8,RF_K_s9) %>% 
+  column_to_rownames("Geneid")
+
+all_RF_norm_edgeR <- cpm(all_RF_counts )
+
+plot_dist_RF <- all_RF_norm_edgeR %>%
+  gather(sample, norm_RF_TPM, -Geneid) %>% 
+  mutate(log2_norm_RF_TPM)
+  
+
+
+##all mRNA genes
+all_mRNA_counts <- mRNA_counts %>%
+  dplyr::select(-X) %>%
+  mutate(mRNA_K_s1 = (mRNA_CDS_s1/Length)*1000) %>% 
+  mutate(mRNA_K_s2 = (mRNA_CDS_s2/Length)*1000) %>% 
+  mutate(mRNA_K_s3 = (mRNA_CDS_s3/Length)*1000) %>% 
+  mutate(mRNA_K_s4 = (mRNA_CDS_s4/Length)*1000) %>% 
+  mutate(mRNA_K_s5 = (mRNA_CDS_s5/Length)*1000) %>%
+  mutate(mRNA_K_s6 = (mRNA_CDS_s6/Length)*1000) %>% 
+  mutate(mRNA_K_s7 = (mRNA_CDS_s7/Length)*1000) %>% 
+  mutate(mRNA_K_s8 = (mRNA_CDS_s8/Length)*1000) %>% 
+  mutate(mRNA_K_s9 = (mRNA_CDS_s9/Length)*1000) %>%
+  dplyr::select(Geneid,mRNA_K_s1, mRNA_K_s2, mRNA_K_s3, mRNA_K_s4, mRNA_K_s5, mRNA_K_s6,mRNA_K_s7, mRNA_K_s8,mRNA_K_s9) %>% 
+  column_to_rownames("Geneid")
+
+all_mRNA_norm_edgeR <- cpm(all_mRNA_counts )
+
 ```
 
