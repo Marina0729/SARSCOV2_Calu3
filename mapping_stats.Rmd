@@ -751,6 +751,8 @@ TPM_mRNA <- all_mRNA_counts %>%
   dplyr::select(Geneid, sample,TPM_mRNA ) %>% 
   spread(sample,TPM_mRNA )
 
+write.csv(TPM_mRNA, "data/TPM_mRNA.csv")
+
 ```
 
 
@@ -825,6 +827,258 @@ plot_6hr_10 <- ggplot(combinded_TE, aes(x = TE_uninfected, y = TE_6hr))+
 
 ggsave(filename = "results/plot_6hr_scatter_50.png", plot = plot_6hr_50, width = 20, height = 20, dpi = 600, units = "cm")
 ggsave(filename = "results/plot_6hr_scatter_10.png", plot = plot_6hr_10, width = 20, height = 20, dpi = 600, units = "cm")
+
 ```
 
+```{r edgeR differential expression }
+
+library(edgeR)
+
+metadata_early <- metadata %>% 
+  filter(condition != "infected_24hr") %>% 
+  dplyr::select(sample, condition) %>%
+  column_to_rownames("sample")
+  
+TE_table_early <- read.csv("data/TE_table_correct.csv") %>%
+  filter(host != "FALSE") %>% 
+  dplyr::select(Geneid, s1, s2, s3, s4, s5, s6) %>%
+  filter(s1<50, s2<50, s3<50, s4<50, s5<50, s6<50)
+  
+TE_counts_early <- DGEList(counts = TE_table_early[, -1], genes = TE_table_early[, 1], samples = metadata_early)
+
+TE_counts_early$genes
+
+design_matrix_early <- model.matrix(~ condition, data = metadata_early)
+
+modelling_TE_early <- voom(TE_counts_early, design = design_matrix_early)
+vfit <- lmFit(modelling_TE_early, design_matrix_early)
+efit <- eBayes(vfit)
+
+TE_early_plot <- voom(TE_counts_early, plot = T, design = design_matrix_early)
+
+coeff_TE <- topTable(efit, number = 8047) %>% 
+  as.tibble() %>% 
+  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>% 
+  mutate(signif = -log10(adj.P.Val)) %>% 
+  arrange(signif)
+
+
+###################################################################################
+immune_genes_volcano <- immune_genes %>% 
+  dplyr::rename(genes = Geneid)
+
+coeff_plotting <- topTable(efit, number = 8047) %>% 
+  as.tibble() %>% 
+  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>%
+  mutate(genes = gsub("\\.\\d+$","", genes)) %>%
+  mutate(signif = -log10(adj.P.Val)) %>%
+  column_to_rownames("genes")
+
+highlight <- coeff_TE %>%
+  filter(adj.P.Val <= 0.01) %>% 
+  filter(logFC >=1 | logFC <=-1) %>%
+  arrange(logFC) %>% 
+  mutate(genes = gsub("\\.\\d+$","", genes)) %>%
+  mutate(signif = -log10(adj.P.Val)) %>%
+  left_join(immune_genes_volcano, by = "genes") %>%
+  filter(name != "NA")
+
+volcano_plot_TE_early <- EnhancedVolcano(coeff_plotting,
+    lab = rownames(coeff_plotting),
+    selectLab = c(highlight$genes),
+    labSize = 5,
+    labFace = 'bold',
+    drawConnectors = TRUE,
+    x = "logFC",
+    y = "adj.P.Val",
+    xlim = c(-3.0, 3.0),
+    ylim = c(0, 8),
+    FCcutoff = 1,
+    pCutoff = 0.01)
+
+ggsave(filename = "results/volcano_plot_TE_early.png", plot = volcano_plot_TE_early, width = 30, height = 25, dpi = 300, units = "cm")
+
+
+```
+
+```{r  difefrential expression at the mRNA level}
+
+mRNA_genes_Chr <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
+  dplyr::select(Geneid, Chr)
+
+metadata_early <- metadata %>% 
+  filter(condition != "infected_24hr") %>% 
+  dplyr::select(sample, condition) %>%
+  column_to_rownames("sample")
+  
+mRNA_table_early <- read.csv("data/TPM_mRNA.csv") %>%
+  dplyr::select(-X) %>%
+  left_join(mRNA_genes_Chr, by = "Geneid") %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  filter(host != "FALSE") %>%
+  dplyr::rename(s1 = mRNA_K_s1, s2 = mRNA_K_s2, s3 = mRNA_K_s3, s4 = mRNA_K_s4, s5 = mRNA_K_s5, s6 = mRNA_K_s6) %>% 
+  dplyr::select(Geneid, s1, s2, s3, s4, s5, s6) %>% 
+  filter(s1>5, s2 >5, s3 >5, s4 >5, s5 >5, s6 >5)
+  
+mRNA_counts_early <- DGEList(counts = mRNA_table_early[, -1], genes = mRNA_table_early[, 1], samples = metadata_early)
+
+design_matrix_early <- model.matrix(~ condition, data = metadata_early)
+
+modelling_mRNA_early <- voom(mRNA_counts_early, design = design_matrix_early)
+vfit_mRNA <- lmFit(modelling_mRNA_early, design_matrix_early)
+efit_mRNA <- eBayes(vfit_mRNA)
+
+mRNA_early_plot <- voom(mRNA_counts_early, plot = T, design = design_matrix_early)
+
+coeff_mRNA <- topTable(efit_mRNA, number = 6673) %>% 
+  as.tibble() %>% 
+  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>% 
+  mutate(signif = -log10(adj.P.Val)) %>% 
+  arrange(signif)
+
+#################### Volcano plot ####################################
+immune_genes_volcano <- immune_genes %>% 
+  dplyr::rename(genes = Geneid)
+
+coeff_plotting_mRNA <- topTable(efit_mRNA, number = 6673) %>% 
+  as.tibble() %>% 
+  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>%
+  mutate(genes = gsub("\\.\\d+$","", genes)) %>%
+  mutate(signif = -log10(adj.P.Val)) %>%
+  column_to_rownames("genes")
+
+highlight_mRNA <- coeff_mRNA %>%
+  filter(adj.P.Val <= 0.01) %>% 
+  filter(logFC >=1 | logFC <=-1) %>%
+  arrange(logFC) %>% 
+  mutate(genes = gsub("\\.\\d+$","", genes)) %>%
+  mutate(signif = -log10(adj.P.Val)) %>%
+  left_join(immune_genes_volcano, by = "genes") %>%
+  filter(name != "NA")
+
+volcano_plot_mRNA_early <- EnhancedVolcano(coeff_plotting_mRNA,
+    lab = rownames(coeff_plotting_mRNA),
+    selectLab = c(highlight_mRNA$genes),
+    labSize = 5,
+    labFace = 'bold',
+    drawConnectors = TRUE,
+    x = "logFC",
+    y = "adj.P.Val",
+    xlim = c(-3.0, 3.0),
+    ylim = c(0, 10),
+    FCcutoff = 1,
+    pCutoff = 0.01)
+
+ggsave(filename = "results/volcano_plot_mRNA_early.png", plot = volcano_plot_mRNA_early, width = 30, height = 25, dpi = 300, units = "cm")
+
+#####################################################################
+
+coeff_mRNA_rename <- coeff_mRNA %>%
+  dplyr::rename(logFC.mRNA = logFC, adj.P.Val.mRNA = adj.P.Val) %>%
+  dplyr::select(genes,logFC.mRNA, adj.P.Val.mRNA)
+
+coeff_TE_rename <- coeff_TE %>%
+  dplyr::rename(logFC.TE = logFC, adj.P.Val.TE = adj.P.Val) %>%
+  dplyr::select(genes,logFC.TE, adj.P.Val.TE)
+  
+
+TE_versus_mRNA <- left_join(coeff_mRNA_rename, coeff_TE_rename, by = "genes" ) %>% 
+  filter(logFC.TE != "NA")
+
+plot_TE_versus_mRNA <- ggplot(TE_versus_mRNA, aes( x= logFC.mRNA, y = logFC.TE))+
+  geom_point()+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  labs(x= "LogFC mRNA-seq (infected/uninfected", 
+       y = "LogFC Translation efficiency (infected/uninfected)")
+
+
+
+```
+```{r comparing two uninfected replicates }
+
+#############  mRNA #####################################
+
+mRNA_genes_Chr <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
+  dplyr::select(Geneid, Chr)
+
+metadata_uninfected <- read.csv("data/SARSCOV2_riboseq__rep_metadata.csv") %>% 
+  filter(sample == "s1"| sample == "s2") %>% 
+  dplyr::select(sample, rep ) %>%
+  column_to_rownames("sample")
+  
+mRNA_table_uninfected <- read.csv("data/TPM_mRNA.csv") %>%
+  dplyr::select(-X) %>%
+  left_join(mRNA_genes_Chr, by = "Geneid") %>%
+  mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
+  filter(host != "FALSE") %>%
+  dplyr::rename(s1 = mRNA_K_s1, s2 = mRNA_K_s2, s3 = mRNA_K_s3, s4 = mRNA_K_s4, s5 = mRNA_K_s5, s6 = mRNA_K_s6) %>% 
+  dplyr::select(Geneid, s1, s2) %>% 
+  filter(s1>5, s2 >5)
+  
+mRNA_counts_uninfected <- DGEList(counts = mRNA_table_uninfected[, -1], genes = mRNA_table_uninfected[, 1], samples = metadata_uninfected)
+
+design_matrix_uninfected<- model.matrix(~ rep, data = metadata_uninfected)
+
+modelling_mRNA_uninfected <- voom(mRNA_counts_uninfected, design = design_matrix_uninfected)
+vfit_mRNA_uninfected <- lmFit(modelling_mRNA_uninfected, design_matrix_uninfected)
+efit_mRNA_uninfected <- eBayes(vfit_mRNA_uninfected)
+
+mRNA_uninfected_plot <- voom(mRNA_counts_uninfcted, plot = T, design = design_matrix_uninfected)
+
+coeff_mRNA_uninfected <- topTable(efit_mRNA_uninfected, number = 6673) %>% 
+  as.tibble() %>% 
+  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>% 
+  mutate(signif = -log10(adj.P.Val)) %>% 
+  arrange(signif)
+
+############# TE #####################################
+
+  
+TE_table_uninfected <- read.csv("data/TE_table_correct.csv") %>%
+  filter(host != "FALSE") %>% 
+  dplyr::select(Geneid, s1, s2) %>%
+  filter(s1<50, s2<50)
+  
+TE_counts_uninfected <- DGEList(counts = TE_table_uninfcetd[, -1], genes = TE_table_uninfected[, 1], samples = metadata_uninfected)
+
+design_matrix_uninfected <- model.matrix(~ condition, data = metadata_early)
+
+modelling_TE_uninfected <- voom(TE_counts_uninfected, design = design_matrix_uninfected)
+vfit_TE_uninfected <- lmFit(modelling_TE_early, design_matrix_uninfected)
+efit_TE_uninfected <- eBayes(vfit_TE_uninfected)
+
+TE_early_plot <- voom(TE_counts_uninfected, plot = T, design = design_matrix_uninfected)
+
+coeff_TE_uninfected <- topTable(efit_TE_uninfected, number = 8047) %>% 
+  as.tibble() %>% 
+  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>% 
+  mutate(signif = -log10(adj.P.Val)) %>% 
+  arrange(signif)
+
+
+##################  joining  TE and mRNA ##########################################
+
+coeff_mRNA_rename_uninfected <- coeff_mRNA_uninfected %>%
+  dplyr::rename(logFC.mRNA = logFC, adj.P.Val.mRNA = adj.P.Val) %>%
+  dplyr::select(genes,logFC.mRNA, adj.P.Val.mRNA)
+
+coeff_TE_rename_uninfected <- coeff_TE_uninfected %>%
+  dplyr::rename(logFC.TE = logFC, adj.P.Val.TE = adj.P.Val) %>%
+  dplyr::select(genes,logFC.TE, adj.P.Val.TE)
+  
+
+TE_versus_mRNA_uninfected <- left_join(coeff_mRNA_rename, coeff_TE_rename, by = "genes" ) %>% 
+  filter(logFC.TE != "NA")
+
+plot_TE_versus_mRNA_uninfected <- ggplot(TE_versus_mRNA_uninfected, aes( x= logFC.mRNA, y = logFC.TE))+
+  geom_point()+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  labs(x= "LogFC mRNA-seq (rep1/rep1)", 
+       y = "LogFC Translation efficiency (rep1/rep2)")
+
+
+
+```
 
