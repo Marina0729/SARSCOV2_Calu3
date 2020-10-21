@@ -22,7 +22,7 @@ library(EnhancedVolcano)
 library(DESeq2)
 library(edgeR)
 library(RUVSeq)
-library(RcolorBrewer)
+library(RColorBrewer)
 
 
 knitr::opts_chunk$set(
@@ -49,9 +49,9 @@ mRNA_raw_host_early_infection <- mRNA_raw_host %>%
 
 #change sample names to include condition
 mRNA_raw_host_early_infection_rename <- mRNA_raw_host_early_infection %>% 
-  dplyr::rename(mRNA_uninfected_s1= mRNA_CDS_s1, mRNA_uninfected_s2 = mRNA_CDS_s2, 
-                mRNA_uninfected_s3 =mRNA_CDS_s3, mRNA_infected.6hr_s4= mRNA_CDS_s4, 
-                mRNA_infected.6hr_s5 = mRNA_CDS_s5, mRNA_infected.6hr_s6 =mRNA_CDS_s6)
+  dplyr::rename(mock.1= mRNA_CDS_s1, mock.2 = mRNA_CDS_s2, 
+                mock.3 =mRNA_CDS_s3, infect6h.4= mRNA_CDS_s4, 
+                infect6h.5 = mRNA_CDS_s5, infect6h.6 =mRNA_CDS_s6)
 
 #convert to count matrix
 mRNA_raw_host_early_infection_matrix <- mRNA_raw_host_early_infection_rename %>% 
@@ -125,10 +125,10 @@ TE_raw_host_early_infection <- TE_raw_host_filtered %>%
 
 #change sample names to include condition
 TE_raw_host_early_infection_rename <- TE_raw_host_early_infection %>%
-  dplyr::rename(TE_uninfected_s1= TE_CDS_s1, TE_uninfected_s2 = TE_CDS_s2, 
-                TE_uninfected_s3 =TE_CDS_s3, TE_infected.6hr_s4= TE_CDS_s4, 
-                TE_infected.6hr_s5 = TE_CDS_s5, TE_infected.6hr_s6 =TE_CDS_s6) %>% 
-  filter(TE_uninfected_s1 != "NA")
+  dplyr::rename(mock.1= TE_CDS_s1, mock.2 = TE_CDS_s2, 
+                mock.3 =TE_CDS_s3, infect6h.4= TE_CDS_s4, 
+                infect6hr.5 = TE_CDS_s5, infect6hr.6 =TE_CDS_s6) %>% 
+  filter(mock.1 != "NA")
 
 #convert to count matrix
 TE_raw_host_early_infection_matrix <- TE_raw_host_early_infection_rename %>%
@@ -165,15 +165,40 @@ length(transcribed_genes_early_infection)
 ```
 
 
-```{r  removing unwanted variation from mRNA count data}
+```{r  exploring variation in unnormalized mRNA count data}
 
 #Store the data in an object of S4 class SeqExpressionset from the EDAsEQ package so that normalization can be visualized
-x_mRNA <- as.factor(rep(c("uninfected", "infected.6hr"), each =3))
+x_mRNA <- as.factor(rep(c("mock", "infect.6h"), each =3))
 set_mRNA <- newSeqExpressionSet(as.matrix(filtered_mRNA_early_infection),
-                           phenoData = data.frame(x, row.names=colnames(filtered_mRNA_early_infection)))
+                           phenoData = data.frame(x_mRNA, row.names=colnames(filtered_mRNA_early_infection)))
 
-
-
+colors <- brewer.pal(3, "Set2")
+plotRLE(set_mRNA, outline=FALSE, ylim=c(-4, 4), col=colors[x_mRNA], cex.lab = 0.2)
+plotPCA(set_mRNA, col=colors[x_mRNA], cex=1.2)
 
 ```
 
+```{r  exploring variation in UQ normalized mRNA count data}
+
+#Normalizing the data using upper-quartile (UQ) normalization
+set_mRNA <- betweenLaneNormalization(set_mRNA, which = "upper")
+plotRLE(set_mRNA, outline=FALSE, ylim=c(-4, 4), col=colors[x_mRNA])
+plotPCA(set_mRNA, col=colors[x_mRNA], cex=1.2)
+
+```
+
+```{r  exploring variation in RUV normalized mRNA count data}
+
+#To estimate the factors of unwanted variation, we are using mito genes as negative control genes. Assuming theyr are not affected by SARSCOV2 infection
+
+set1_mRNA <- RUVg(set_mRNA, mito_genes, k=1)
+pData(set1_mRNA)
+
+pData(set1_mRNA)
+
+betweenLaneNormalization(set_mRNA, which = "upper")
+plotRLE(set_mRNA, outline=FALSE, ylim=c(-4, 4), col=colors[x_mRNA])
+plotPCA(set, col=colors[x_mRNA], cex=1.2)
+
+
+```
