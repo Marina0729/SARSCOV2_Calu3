@@ -376,6 +376,8 @@ RF_mRNA_raw_counts <- left_join(mRNA_CDS_counts,RF_CDS_counts, by = "Geneid" ) %
   dplyr::rename(Length =Length.x) %>% 
   filter(Geneid != "ORF1a")
 
+write.csv(RF_mRNA_raw_counts, "data/RF_mRNA_raw_counts")
+
 ############### CPM normalization ##########
 
 RF_gather_join_normalize_host <- RF_CDS_counts %>% 
