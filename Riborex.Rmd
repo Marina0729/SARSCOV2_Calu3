@@ -1,0 +1,102 @@
+---
+title: "Riborex_Pipeline"
+author: "Marina Alexander"
+date: "27/10/2020"
+output:
+  pdf_document: default
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+
+# remind R where to look for libraries
+.libPaths(c("C:/Users/ale097/Data School/Packages"))
+# load libraries
+library(tidyverse)
+library(dplyr)
+library(knitr)
+
+ 
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center'
+)
+```
+
+```{r}
+
+#making a ribosome counts table 
+s1.CDS.r <- read.delim("data/sRNA_01_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s1.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_01_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(Geneid, Chr, Length, s1.r)
+s2.CDS.r <- read.delim("data/sRNA_02_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s2.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_02_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s2.r)
+s3.CDS.r <- read.delim("data/sRNA_03_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s3.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_03_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s3.r)
+s4.CDS.r <- read.delim("data/sRNA_04_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s4.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_04_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s4.r)
+s5.CDS.r <- read.delim("data/sRNA_05_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s5.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_05_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s5.r)
+s6.CDS.r <- read.delim("data/sRNA_06_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s6.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_06_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s6.r)
+s7.CDS.r <- read.delim("data/sRNA_07_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s7.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_07_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s7.r)
+s8.CDS.r <- read.delim("data/sRNA_08_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s8.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_08_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s8.r)
+s9.CDS.r <- read.delim("data/sRNA_09_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s9.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_09_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s9.r)
+
+ribosome_CDS_counts <- bind_cols(s1.CDS.r,s2.CDS.r, s3.CDS.r, s4.CDS.r, s5.CDS.r, s6.CDS.r, s7.CDS.r, s8.CDS.r, s9.CDS.r )
+
+actively_translated_in_mock <- ribosome_CDS_counts %>% 
+  filter(s1.r>5,s2.r>5, s3.r>5) %>% 
+  dplyr::select(Geneid)
+
+```
+
+```{r}
+#making a mRNA counts table 
+s1.CDS.m <- read.delim("data/mRNA_01_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s1.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_01_mappedAligned.out.sam) %>% 
+  dplyr::select(Geneid, Chr, Length, s1.r)
+s2.CDS.m <- read.delim("data/mRNA_02_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s2.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_02_mappedAligned.out.sam) %>% 
+  dplyr::select(s2.r)
+s3.CDS.m <- read.delim("data/mRNA_03_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s3.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_03_mappedAligned.out.sam) %>% 
+  dplyr::select(s3.r)
+s4.CDS.m <- read.delim("data/mRNA_04_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s4.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_04_mappedAligned.out.sam) %>% 
+  dplyr::select(s4.r)
+s5.CDS.m <- read.delim("data/mRNA_05_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s5.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_05_mappedAligned.out.sam) %>% 
+  dplyr::select(s5.r)
+s6.CDS.m <- read.delim("data/mRNA_06_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s6.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_06_mappedAligned.out.sam) %>% 
+  dplyr::select(s6.r)
+s7.CDS.m <- read.delim("data/mRNA_07_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s7.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_07_mappedAligned.out.sam) %>% 
+  dplyr::select(s7.r)
+s8.CDS.m <- read.delim("data/mRNA_08_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s8.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_08_mappedAligned.out.sam) %>% 
+  dplyr::select(s8.r)
+s9.CDS.m <- read.delim("data/mRNA_09_R1_virus_host_FeatureCount_CDS.txt", skip = 1) %>% 
+  dplyr::rename(s9.r = X.scratch1.ale097.shutoff.mapping.virus_host_mRNA.mRNA_09_mappedAligned.out.sam) %>% 
+  dplyr::select(s9.r)
+
+mRNA_counts <- bind_cols(s1.CDS.m,s2.CDS.m, s3.CDS.m, s4.CDS.m, s5.CDS.m, s6.CDS.m, s7.CDS.m, s8.CDS.m, s9.CDS.m )
+
+```
+

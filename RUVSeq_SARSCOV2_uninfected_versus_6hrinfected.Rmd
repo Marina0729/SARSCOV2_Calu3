@@ -16,11 +16,6 @@ output:
 library(tidyverse)
 library(dplyr)
 library(knitr)
-library(readr)
-library(stringr)
-library(EnhancedVolcano)
-library(DESeq2)
-library(edgeR)
 library(RUVSeq)
 library(RColorBrewer)
 
@@ -190,15 +185,11 @@ plotPCA(set_mRNA, col=colors[x_mRNA], cex=1.2)
 ```{r  exploring variation in RUV normalized mRNA count data}
 
 #To estimate the factors of unwanted variation, we are using mito genes as negative control genes. Assuming theyr are not affected by SARSCOV2 infection
+class(set_mRNA)
 
-set1_mRNA <- RUVg(set_mRNA, mito_genes, k=1)
-pData(set1_mRNA)
+signature(x=set_mRNA, cIdx = mito_genes, k= 1)
 
-pData(set1_mRNA)
-
-betweenLaneNormalization(set_mRNA, which = "upper")
-plotRLE(set_mRNA, outline=FALSE, ylim=c(-4, 4), col=colors[x_mRNA])
-plotPCA(set, col=colors[x_mRNA], cex=1.2)
+set1_mRNA <- RUVSeq::RUVg(x=set_mRNA,cIdx=mito_genes, k=1)
 
 
 ```

@@ -273,7 +273,6 @@ plot_RPKM <- ggplot(all_samples, aes(y= RPKM_mean_per_gene, x= timepoint, color 
 
 mRNA_genes <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
   dplyr::select(Geneid, Chr, Length)
-
 mRNA_sample1 <- read.csv("data/mRNA_CDS_01.csv", skip =1) %>% 
   dplyr::select(mRNA_CDS_s1)
 mRNA_sample2 <- read.csv("data/mRNA_CDS_02.csv", skip =1) %>% 
@@ -426,8 +425,7 @@ TE_table <- left_join(norm_RF_counts,mRNA_gather_join_normalize, by = "Geneid") 
   dplyr::select(Geneid,TE_s1, TE_s2, TE_s3, TE_s4, TE_s5, TE_s6, TE_s7, TE_s8, TE_s9) %>% 
   left_join(mRNA_genes, by = "Geneid")
 
-#### looking at mitochondrial transcripts 
-TE_tabl
+
 
 ```
 
@@ -626,7 +624,7 @@ mito_mRNA_counts <- mRNA_counts %>%
 
 group_mRNA <- c(rep("A",ncol(mito_mRNA_counts)))
 mito_mRNA_norm <- DGEList(counts=mito_mRNA_counts,group=group_mRNA)
-mito_mRNA_norm <- calcNormFactors(mito_mRNA_norm, method = "TMM")
+mito_mRNA_norm <- calcNormFactors(mito_mRNA_norm, method = "RLE")
 mito_mRNA_norm_edgeR <- cpm(mito_mRNA_norm)
 
 get_norm_factors_mRNA <- mito_mRNA_norm$samples %>% 
@@ -656,7 +654,7 @@ plot_boxplot_mRNA <- mito_mRNA_edgeR %>%
 
 boxplot_normalize_mRNA <- plot_grid(plot_boxplot_mRNA,plot_boxplot_norm_mRNA, ncol = 1)
 
-ggsave(filename = "results/boxplot_normalize_mRNA_TMM.png", plot = boxplot_normalize_mRNA, width = 20, height = 15, dpi = 600, units = "cm")
+ggsave(filename = "results/boxplot_normalize_mRNA_RLE.png", plot = boxplot_normalize_mRNA, width = 20, height = 15, dpi = 600, units = "cm")
 
 
 
@@ -664,7 +662,7 @@ ggsave(filename = "results/boxplot_normalize_mRNA_TMM.png", plot = boxplot_norma
 ```
 
 
-```{r   GeTMM using TMM normalization on length corrected transcripts for all genes}
+```{r   GeTMM using RLE normalization on length corrected transcripts for all genes}
 
 RF_counts <- read.csv("data/RF_CDS_counts.csv")
 mRNA_counts <- read.csv("data/mRNA_CDS_counts.csv")
@@ -691,7 +689,7 @@ library(edgeR)
 # for normalization purposes, no grouping of samples
 group_RF_all <- c(rep("A",ncol(all_RF_counts)))
 all_RF_norm <- DGEList(counts=all_RF_counts,group=group_RF_all)
-all_RF_norm <- calcNormFactors(all_RF_norm, method = "TMM")
+all_RF_norm <- calcNormFactors(all_RF_norm, method = "RLE")
 
 get_norm_library_size_RF <- all_RF_norm$samples %>%
   as_tibble(rownames = "sample") %>% 
@@ -736,7 +734,7 @@ all_mRNA_counts <- mRNA_counts %>%
 
 group_mRNA_all <- c(rep("A",ncol(all_mRNA_counts)))
 all_mRNA_norm <- DGEList(counts=all_mRNA_counts,group=group_mRNA_all)
-all_mRNA_norm <- calcNormFactors(all_mRNA_norm, method = "TMM")
+all_mRNA_norm <- calcNormFactors(all_mRNA_norm, method = "RLE")
 
 get_norm_library_size_mRNA <- all_mRNA_norm$samples %>%
   as_tibble(rownames = "sample") %>% 
@@ -772,7 +770,7 @@ TE_table <- left_join(TPM_RF, TPM_mRNA, by ="Geneid" ) %>%
   mutate(s9 = RF_K_s1/mRNA_K_s9) %>% 
   dplyr::select(Geneid, s1, s2, s3, s4, s5, s6, s7, s8, s9)
   
-
+write.csv(TE_table, "data/TE_table.csv")
 
 ```
 
@@ -785,7 +783,7 @@ immune_genes <- read.csv("data/InnateDB_genes.csv") %>%
   dplyr::rename(Geneid = ensembl) %>% 
   dplyr::select(Geneid, name, function.)
 
-TE_table_metadata <- read.csv("data/TE_table_correct.csv") %>% 
+TE_table_metadata <- TE_table %>% 
   gather(sample, TE, -Geneid, -host) %>% 
   left_join(metadata, by = "sample") %>%
   mutate(Geneid = gsub("\\.\\d+$","", Geneid)) %>%
@@ -836,69 +834,101 @@ ggsave(filename = "results/plot_6hr_scatter_10.png", plot = plot_6hr_10, width =
 
 library(edgeR)
 
+metadata <- read.csv("data/SARSCOV2_riboseq_metadata.csv")
+
 metadata_early <- metadata %>% 
   filter(condition != "infected_24hr") %>% 
   dplyr::select(sample, condition) %>%
   column_to_rownames("sample")
   
-TE_table_early <- read.csv("data/TE_table_correct.csv") %>%
-  filter(host != "FALSE") %>% 
+TE_table_early <- TE_table %>%
+  filter(str_detect(Geneid, "ENSG")) %>%
   dplyr::select(Geneid, s1, s2, s3, s4, s5, s6) %>%
-  filter(s1<50, s2<50, s3<50, s4<50, s5<50, s6<50)
-  
+  filter(s1<15, s2<15, s3<15, s4<15, s5<15, s6<15) %>% 
+  filter(s1>0, s2>0, s3>0, s4>0, s5>0, s6>0) %>% 
+  filter(s1!="NA", s2!="NA", s3!="NA", s4!="NA", s5!="NA", s6!="NA") %>% 
+  filter(s1!="Inf", s2!="Inf", s3!="Inf", s4!="Inf", s5!="Inf", s6!="Inf")
+
+plot_dist_TE_TPM <- TE_table_early %>%
+  gather(sample, TE, -Geneid) %>% 
+  ggplot(aes(x=TE, color = sample))+
+  geom_density()
+ggsave(filename = "results/plot_dist_TE_TPM.png", plot = plot_dist_TE_TPM, width = 15, height = 15, dpi = 300, units = "cm")
+
+plot_boxplot_TE_TPM <- TE_table_early %>%
+  gather(sample, TE, -Geneid) %>% 
+  ggplot(aes(x=sample, y = TE))+
+  geom_boxplot()+
+  scale_y_log10()
+ggsave(filename = "results/plot_boxplot_TE_TPM.png", plot = plot_boxplot_TE_TPM, width = 15, height = 15, dpi = 300, units = "cm")
+
+library.sizes <- TE_table_early %>%
+  gather(sample, TE, -Geneid) %>% 
+  group_by(sample) %>% 
+  summarise(sum = sum(TE))
+
 TE_counts_early <- DGEList(counts = TE_table_early[, -1], genes = TE_table_early[, 1], samples = metadata_early)
 
 TE_counts_early$genes
 
 design_matrix_early <- model.matrix(~ condition, data = metadata_early)
 
-modelling_TE_early <- voom(TE_counts_early, design = design_matrix_early)
+modelling_TE_early <- voom(TE_counts_early, design = design_matrix_early, normalize.method = "none", plot = TRUE)
 vfit <- lmFit(modelling_TE_early, design_matrix_early)
 efit <- eBayes(vfit)
-
-TE_early_plot <- voom(TE_counts_early, plot = T, design = design_matrix_early)
-
-coeff_TE <- topTable(efit, number = 8047) %>% 
-  as.tibble() %>% 
-  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>% 
-  mutate(signif = -log10(adj.P.Val)) %>% 
-  arrange(signif)
 
 
 ###################################################################################
 immune_genes_volcano <- immune_genes %>% 
-  dplyr::rename(genes = Geneid)
+  dplyr::rename(Geneid_stable = Geneid)
 
-coeff_plotting <- topTable(efit, number = 8047) %>% 
+signif_immune_TE<- topTable(efit, number = 12287, p.value = 0.01, lfc = 1)  %>%
+  dplyr::select(Geneid, logFC,adj.P.Val ) %>% 
+  mutate(Geneid_stable = gsub("\\.\\d+$","", Geneid)) %>%
+  left_join(immune_genes_volcano, by = "Geneid_stable") %>%
+  filter(name != "NA")
+
+coeff_TE <- topTable(efit, number = 12287) %>% 
   as.tibble() %>% 
   dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>%
   mutate(genes = gsub("\\.\\d+$","", genes)) %>%
-  mutate(signif = -log10(adj.P.Val)) %>%
+    mutate(genes = str_replace_all(genes, c("ENSG00000129514" = "FOXA1",
+                                            "ENSG00000101255" = "TRIB3",
+                                            "ENSG00000204616" = "TRIM31",
+                                            "ENSG00000005001" ="PRSS22",
+                                            "ENSG00000166046" = "TCP11L2",
+                                            "ENSG00000130513" = "GDF15",
+                                            "ENSG00000172216" = "CEBPB",
+                                            "ENSG00000265972"= "TXNIP",
+                                            "ENSG00000185499" = "MUC1",
+                                            "ENSG00000163661" = "PTX3",
+                                            "ENSG00000100968" = "NFATC4",
+                                            "ENSG00000101665" = "SMAD7",
+                                            "ENSG00000136244" = "IL6"))) %>% 
   column_to_rownames("genes")
 
-highlight <- coeff_TE %>%
-  filter(adj.P.Val <= 0.01) %>% 
-  filter(logFC >=1 | logFC <=-1) %>%
-  arrange(logFC) %>% 
-  mutate(genes = gsub("\\.\\d+$","", genes)) %>%
-  mutate(signif = -log10(adj.P.Val)) %>%
-  left_join(immune_genes_volcano, by = "genes") %>%
-  filter(name != "NA")
 
-volcano_plot_TE_early <- EnhancedVolcano(coeff_plotting,
-    lab = rownames(coeff_plotting),
+
+highlight <- coeff_TE %>%
+  as_tibble(rownames = "genes") %>% 
+  filter(!str_detect(genes, "ENSG"))
+
+volcano_plot_TE_early <- EnhancedVolcano(coeff_TE,
+    lab = rownames(coeff_TE),
     selectLab = c(highlight$genes),
-    labSize = 5,
+    labSize = 3,
     labFace = 'bold',
     drawConnectors = TRUE,
     x = "logFC",
     y = "adj.P.Val",
     xlim = c(-3.0, 3.0),
-    ylim = c(0, 8),
+    ylim = c(0, 4),
+    title = "Translation efficiency \n 6hrs post infection",
+    caption = "FC cutoff=2, adjusted p-value cutoff =0.01",
     FCcutoff = 1,
     pCutoff = 0.01)
 
-ggsave(filename = "results/volcano_plot_TE_early.png", plot = volcano_plot_TE_early, width = 30, height = 25, dpi = 300, units = "cm")
+ggsave(filename = "results/volcano_plot_TE_early.png", plot = volcano_plot_TE_early, width = 15, height = 15, dpi = 300, units = "cm")
 
 
 ```
@@ -913,12 +943,12 @@ metadata_early <- metadata %>%
   dplyr::select(sample, condition) %>%
   column_to_rownames("sample")
   
-mRNA_table_early <- read.csv("data/TPM_mRNA.csv") %>%
+mRNA_table_early <- read.csv("data/mRNA_CDS_counts.csv") %>%
   dplyr::select(-X) %>%
   left_join(mRNA_genes_Chr, by = "Geneid") %>%
   mutate(host = case_when(str_detect(Geneid, "ENSG") ~ TRUE, TRUE ~ FALSE )) %>%
   filter(host != "FALSE") %>%
-  dplyr::rename(s1 = mRNA_K_s1, s2 = mRNA_K_s2, s3 = mRNA_K_s3, s4 = mRNA_K_s4, s5 = mRNA_K_s5, s6 = mRNA_K_s6) %>% 
+  dplyr::rename(s1 = mRNA_CDS_s1, s2 = mRNA_CDS_s2, s3 = mRNA_CDS_s3, s4 = mRNA_CDS_s4, s5 = mRNA_CDS_s5, s6 = mRNA_CDS_s6) %>% 
   dplyr::select(Geneid, s1, s2, s3, s4, s5, s6) %>% 
   filter(s1>5, s2 >5, s3 >5, s4 >5, s5 >5, s6 >5)
   
@@ -930,56 +960,59 @@ modelling_mRNA_early <- voom(mRNA_counts_early, design = design_matrix_early)
 vfit_mRNA <- lmFit(modelling_mRNA_early, design_matrix_early)
 efit_mRNA <- eBayes(vfit_mRNA)
 
-mRNA_early_plot <- voom(mRNA_counts_early, plot = T, design = design_matrix_early)
 
-coeff_mRNA <- topTable(efit_mRNA, number = 6673) %>% 
-  as.tibble() %>% 
-  dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>% 
-  mutate(signif = -log10(adj.P.Val)) %>% 
-  arrange(signif)
 
 #################### Volcano plot ####################################
 immune_genes_volcano <- immune_genes %>% 
   dplyr::rename(genes = Geneid)
 
-coeff_plotting_mRNA <- topTable(efit_mRNA, number = 6673) %>% 
+coeff_plotting_mRNA <- topTable(efit_mRNA, number = 12183) %>% 
   as.tibble() %>% 
   dplyr::select(genes, logFC, AveExpr, adj.P.Val) %>%
   mutate(genes = gsub("\\.\\d+$","", genes)) %>%
-  mutate(signif = -log10(adj.P.Val)) %>%
+  mutate(genes = str_replace_all(genes, c("ENSG00000196083" = "IL1RAP",
+                                            "ENSG00000165949" = "IFI27",
+                                            "ENSG00000129514" = "FOXA1",
+                                            "ENSG00000101255" = "TRIB3",
+                                          "ENSG00000128272" = "ATF4",
+                                          "ENSG00000005001" ="PRSS22",
+                                          "ENSG00000204616" = "TRIM31",
+                                          "ENSG00000130513" = "GDF15"))) %>%
   column_to_rownames("genes")
 
-highlight_mRNA <- coeff_mRNA %>%
-  filter(adj.P.Val <= 0.01) %>% 
-  filter(logFC >=1 | logFC <=-1) %>%
-  arrange(logFC) %>% 
+signif_immune_mRNA <- topTable(efit_mRNA, number = 12138, p.value = 0.01, lfc = 1) %>%
   mutate(genes = gsub("\\.\\d+$","", genes)) %>%
-  mutate(signif = -log10(adj.P.Val)) %>%
   left_join(immune_genes_volcano, by = "genes") %>%
   filter(name != "NA")
+
+highlight_mRNA <- coeff_plotting_mRNA %>%
+  as_tibble(rownames = "genes") %>% 
+  filter(!str_detect(genes, "ENSG"))
 
 volcano_plot_mRNA_early <- EnhancedVolcano(coeff_plotting_mRNA,
     lab = rownames(coeff_plotting_mRNA),
     selectLab = c(highlight_mRNA$genes),
-    labSize = 5,
+    labSize = 3,
     labFace = 'bold',
     drawConnectors = TRUE,
     x = "logFC",
     y = "adj.P.Val",
     xlim = c(-3.0, 3.0),
     ylim = c(0, 10),
+    title = "Transcription efficiency \n 6hrs post infection",
+    caption = "FC cutoff=2, adjusted p-value cutoff =0.01",
     FCcutoff = 1,
     pCutoff = 0.01)
 
-ggsave(filename = "results/volcano_plot_mRNA_early.png", plot = volcano_plot_mRNA_early, width = 30, height = 25, dpi = 300, units = "cm")
+ggsave(filename = "results/volcano_plot_mRNA_early.png", plot = volcano_plot_mRNA_early, width = 15, height = 15, dpi = 300, units = "cm")
 
 #####################################################################
 
-coeff_mRNA_rename <- coeff_mRNA %>%
+coeff_mRNA_rename <- topTable(efit_mRNA, number = 121387) %>%
   dplyr::rename(logFC.mRNA = logFC, adj.P.Val.mRNA = adj.P.Val) %>%
   dplyr::select(genes,logFC.mRNA, adj.P.Val.mRNA)
 
-coeff_TE_rename <- coeff_TE %>%
+coeff_TE_rename <- topTable(efit, number = 12287) %>%
   dplyr::rename(logFC.TE = logFC, adj.P.Val.TE = adj.P.Val) %>%
   dplyr::select(genes,logFC.TE, adj.P.Val.TE)
   
@@ -991,12 +1024,14 @@ plot_TE_versus_mRNA <- ggplot(TE_versus_mRNA, aes( x= logFC.mRNA, y = logFC.TE))
   geom_point()+
   geom_hline(yintercept = 0)+
   geom_vline(xintercept = 0)+
-  labs(x= "LogFC mRNA-seq (infected/uninfected", 
+  labs(x= "LogFC mRNA-seq (infected/uninfected)", 
        y = "LogFC Translation efficiency (infected/uninfected)")
 
-
+ggsave(filename = "results/plot_TE_versus_mRNA.png", plot = plot_TE_versus_mRNA, width = 15, height = 15, dpi = 300, units = "cm")
 
 ```
+
+
 ```{r comparing two uninfected replicates }
 
 #############  mRNA #####################################

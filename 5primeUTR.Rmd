@@ -1,0 +1,96 @@
+---
+title: "5primeUTRmapping"
+author: "Marina Alexander"
+date: "26/10/2020"
+output:
+  pdf_document: default
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+
+# remind R where to look for libraries
+.libPaths(c("C:/Users/ale097/Data School/Packages"))
+# load libraries
+library(tidyverse)
+library(dplyr)
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center'
+)
+```
+
+```{r}
+#making a simplified SAF-format file for Subread input
+FivePrimeUTR <- read.delim("data/5primeUTR_SAF.txt") %>%
+  filter(X5..UTR.start != "NA") %>%
+  mutate(Chromosome.scaffold.name = sub("^", "chr", Chromosome.scaffold.name)) %>% 
+  mutate(Strand = str_replace_all(Strand,c("-1" = "-", "1" = "+"))) %>% 
+  dplyr::rename(Geneid = Gene.stable.ID.version, Chr = Chromosome.scaffold.name, Start = X5..UTR.start, End = X5..UTR.end) %>% 
+  dplyr::select(Geneid, Chr, Start, End, Strand)
+write.table(FivePrimeUTR,"data/FivePrimeUTR.txt", sep = "\t", row.names = FALSE )
+
+
+#reading in the data from Subread featureCounts
+s1.5UTR.r <- read.delim("data/sRNA_01_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s1.mock.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_01_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(Geneid,s1.mock.r)
+s2.5UTR.r <- read.delim("data/sRNA_02_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s2.mock.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_02_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s2.mock.r)
+s3.5UTR.r <- read.delim("data/sRNA_03_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s3.mock.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_03_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s3.mock.r)
+s4.5UTR.r <- read.delim("data/sRNA_04_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s4.infect6h.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_04_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s4.infect6h.r)
+s5.5UTR.r <- read.delim("data/sRNA_05_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s5.infect6h.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_05_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s5.infect6h.r)
+s6.5UTR.r <- read.delim("data/sRNA_06_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s6.infect6h.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_06_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s6.infect6h.r)
+s7.5UTR.r <- read.delim("data/sRNA_07_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s7.infect24h.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_07_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s7.infect24h.r)
+s8.5UTR.r <- read.delim("data/sRNA_08_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s8.infect24h.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_08_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s8.infect24h.r)
+s9.5UTR.r <- read.delim("data/sRNA_09_R1_virus_host_FeatureCount_5UTR.txt", skip = 1) %>% 
+  dplyr::rename(s9.infect24h.r = X.scratch1.ale097.shutoff.mapping.virus_host.sRNA_09_R1_cdna_mappedAligned.out.sam) %>% 
+  dplyr::select(s9.infect24h.r)
+
+ribosome_5TUR_counts_stats <- bind_cols(s1.5UTR.r,s2.5UTR.r, s3.5UTR.r, s4.5UTR.r, s5.5UTR.r, s6.5UTR.r ) %>%
+  right_join(actively_translated_in_mock, by = "Geneid") %>% 
+  gather(sample, counts, -Geneid) %>%
+  mutate(counts = as.numeric(counts)) %>% 
+  separate(sample, c("sample", "condition", "source")) %>% 
+  group_by(Geneid, condition) %>% 
+  summarise(mean_counts = mean(counts), inverse_error = (1/(sd(counts)))) %>% 
+  filter(mean_counts != "NA") %>% 
+  ggplot(aes(x=mean_counts, y = inverse_error, color = condition))+
+  geom_point()+
+  scale_y_log10()
+
+ribosome_5TUR_counts <- bind_cols(s1.5UTR.r,s2.5UTR.r, s3.5UTR.r, s4.5UTR.r, s5.5UTR.r, s6.5UTR.r ) %>%
+  right_join(actively_translated_in_mock, by = "Geneid") %>% 
+  gather(sample, counts, -Geneid) %>%
+  mutate(counts = as.numeric(counts)) %>% 
+  separate(sample, c("sample", "condition", "source")) %>% 
+  group_by(Geneid, condition) %>% 
+  summarise(mean_counts = mean(counts), inverse_error = (1/(sd(counts)))) %>% 
+  filter(mean_counts != "NA") %>% 
+  dplyr::select(Geneid, condition, mean_counts) %>% 
+  spread(condition, mean_counts) %>% 
+  filter()
+
+  
+#want to filter genes that are actively translated as determined by Riborex
+
+```
+
