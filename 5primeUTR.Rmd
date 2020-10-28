@@ -86,8 +86,11 @@ ribosome_5TUR_counts <- bind_cols(s1.5UTR.r,s2.5UTR.r, s3.5UTR.r, s4.5UTR.r, s5.
   summarise(mean_counts = mean(counts), inverse_error = (1/(sd(counts)))) %>% 
   filter(mean_counts != "NA") %>% 
   dplyr::select(Geneid, condition, mean_counts) %>% 
-  spread(condition, mean_counts) %>% 
-  filter()
+  spread(condition, mean_counts) %>%
+  mutate(log2FC = log2(infect6h/mock) ) %>%
+  filter(infect6h >5 ) %>%
+  filter(log2FC > 0) %>% 
+  arrange(desc(log2FC))
 
   
 #want to filter genes that are actively translated as determined by Riborex

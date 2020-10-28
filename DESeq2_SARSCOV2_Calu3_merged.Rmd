@@ -81,7 +81,7 @@ write.csv(norm_counts_merged, file="results/DESeq2_SARSCOV2_Calu3_all_normalized
 
 
 # Convert results to dataframe:
-CoV2genes24hr_merged <- results(dds_merged, contrast = c("condition", "SARSCOV2_24hr", "uninfected_24hr"))
+CoV2genes6hr_merged <- results(dds_merged, contrast = c("condition", "SARSCOV2_6hr", "uninfected_24hr"))
 
 CoV2genes24hr_merged %>% 
   as_tibble(rownames = "gene")
@@ -98,30 +98,37 @@ beta <- c( 1 )
 gamma <- c( 5 )
 
 # 'Which' provides positions of 'TRUE' values.
-sigCoV2genes24hr_merged<- CoV2genes24hr_merged[ which( CoV2genes24hr_merged$padj < alpha), ]
+sigCoV2genes6hr_merged<- CoV2genes6hr_merged[ which( CoV2genes6hr_merged$padj < alpha), ]
 # Slices out rows where the adjusted p-value is <0.05.
-sigCoV2genes24hr_merged <- sigCoV2genes24hr_merged[ which( abs(sigCoV2genes24hr_merged$log2FoldChange) > beta), ]
+sigCoV2genes6hr_merged <- sigCoV2genes6hr_merged[ which( abs(sigCoV2genes6hr_merged$log2FoldChange) > beta), ]
 # Slices out rows where the fold change is above 2 and below -2.
 # Abs=absolute, tells it to filter things above 2, ignoring whether value is positive or negative.
-sigCoV2genes24hr_merged <- sigCoV2genes24hr_merged[ which(sigCoV2genes24hr_merged$baseMean > gamma), ]
-write.csv(sigCoV2genes24hr_merged, file="results/sigCoV2genes24hr_merged.csv")
+sigCoV2genes6hr_merged <- sigCoV2genes6hr_merged[ which(sigCoV2genes6hr_merged$baseMean > gamma), ]
+write.csv(sigCoV2genes6hr_merged, file="results/sigCoV2genes6hr_merged.csv")
 # Slices out rows above an average count of 10 reads (anything below is rubbish).
 
-CoV2genes24hr_hits_merged <- rownames(sigCoV2genes24hr_merged)
-length(CoV2genes24hr_hits_merged)
-write.csv(norm_counts_merged[CoV2genes24hr_hits_merged, ], file="results/DESeq2_sig_CoV2genes24hr_normalized_counts_merged.csv")
+CoV2genes6hr_hits_merged <- rownames(sigCoV2genes6hr_merged)
+length(CoV2genes6hr_hits_merged)
+write.csv(norm_counts_merged[CoV2genes6hr_hits_merged, ], file="results/DESeq2_sig_CoV2genes6hr_normalized_counts_merged.csv")
 
-SARSCOV2_DEgenes_Calu3_24hrs_merged <- read_csv("results/sigCoV2genes24hr_merged.csv") %>%
+SARSCOV2_DEgenes_Calu3_6hrs_merged <- read_csv("results/sigCoV2genes6hr_merged.csv") %>%
   as.data.frame() %>% 
   dplyr::rename(GENE_LOCUS = X1) %>%
   arrange(padj)
 
-write.csv(SARSCOV2_DEgenes_Calu3_24hrs_merged, "results/SARSCOV2_DEgenes_Calu3_24hrs_merged.csv")
+write.csv(SARSCOV2_DEgenes_Calu3_6hrs_merged, "results/SARSCOV2_DEgenes_Calu3_6hrs_merged.csv")
 
-SARSCOV2_DEgenes_Calu3_24hrs_david_merged <- SARSCOV2_DEgenes_Calu3_24hrs_merged %>% 
-  dplyr::select(gene)
+immune_genes <- read.csv("data/InnateDB_genes.csv") %>% 
+  filter(species == "Homo sapiens") %>% 
+  dplyr::rename(Geneid = ensembl) %>% 
+  dplyr::select(Geneid, name, function.)
 
-write.csv(SARSCOV2_DEgenes_Calu3_24hrs_david_merged, "results/SARSCOV2_DEgenes_Calu3_24hrs_david_merged.csv")
+signif_immune <-SARSCOV2_DEgenes_Calu3_6hrs_merged %>%
+  separate(GENE_LOCUS, c("XLOC", "ID", "name")) %>%
+  dplyr::select(name, log2FoldChange,padj ) %>% 
+  left_join(immune_genes, by = "name") %>%
+  filter(Geneid != "NA")
+
 
 ```
 
